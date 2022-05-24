@@ -1,6 +1,7 @@
 """ Oakland PEC Netfile data exploration
 """
 import argparse
+from pathlib import Path
 from time import sleep
 import pandas as pd
 import requests
@@ -12,9 +13,9 @@ PARAMS = { 'aid': AID }
 
 class PageTracker:
     """ Track request pages """
-    def __init__(self, start_page=1, last_page=None):
+    def __init__(self, start_page=0, last_page=None):
         self._cur_page = start_page
-        self._last_page = last_page
+        self._last_page = last_page or start_page
 
     def __lt__(self, value):
         return self._cur_page < value
@@ -86,7 +87,7 @@ def get_filer_transactions(get_all=False) -> pd.DataFrame:
 
             sleep_time = .1 if page.cur_page % 10 == 0 else .25
             sleep(sleep_time)
-            
+
     num_filers = len(filers)
     print('  - Collected total filers', num_filers)
 
@@ -114,7 +115,7 @@ def get_filer_transactions(get_all=False) -> pd.DataFrame:
         print('  - Sample transaction', transactions[0])
 
         if get_all is True:
-            page = PageTracker(1)
+            page = PageTracker(last_page=num_pages)
             page.print()
             while page < num_pages:
                 page.incr()
@@ -153,11 +154,15 @@ def get_filings(get_all=False, filter_amended=False):
     filings = body['filings']
     num_pages = body['totalMatchingPages']
     print('Filings', end='\n—\n')
-    print(f'filings returned: {len(filings)}', f'total filings: {body["totalMatchingCount"]}', f'total pages: {num_pages}', sep=' | ')
+    print(
+        f'filings returned: {len(filings)}',
+        f'total filings: {body["totalMatchingCount"]}',
+        f'total pages: {num_pages}', sep=' | '
+    )
     print('  - Sample filing', filings[0])
 
     if get_all is True:
-        page = PageTracker(1)
+        page = PageTracker(last_page=num_pages)
         page.print()
         while page < num_pages:
             page.incr()
@@ -190,12 +195,13 @@ def get_filings(get_all=False, filter_amended=False):
         ]
         print(f'  - Found {len(amended)} amended filings')
         amended = set(amended)
-        print(f'  - {len(set)} after de-dupe')
+        print(f'    - That\'s {len(amended)} after de-dupe')
 
         filings = [ filing for filing in filings if filing['id'] not in amended ]
         print(f'  - {len(filings)} left after filtering out amended')
 
-    return pd.DataFrame(filings)
+    df = pd.DataFrame(filings)
+    return df
 
 
 def get_transactions_for_filing(filing_id):
@@ -219,7 +225,7 @@ def main():
     parser.add_argument('--endpoint', '-e', required=True, choices=[ 'transactions', 'filings' ])
     parser.add_argument('--save', '-s', action='store_true')
     parser.add_argument('--all', '-a', action='store_true')
-    parser.add_argument('--filter_amended', action='store_true')
+    parser.add_argument('--filter-amended', action='store_true')
 
     args = parser.parse_args()
 
@@ -239,7 +245,7 @@ def main():
     kwargs = {
         'get_all': args.all,
         **{
-            k: getattr(args, k) for k in program['args']
+            k.replace('-', '_'): getattr(args, k) for k in program['args']
         }
     }
     print(f'Arguments: {kwargs}')
@@ -248,7 +254,9 @@ def main():
     print(f'Got {len(results)} results for endpoint {endpoint}')
 
     if args.save is True:
-        results.to_parquet(args.endpoint, partition_cols=['filerLocalId'])
+        outpath = Path(args.endpoint)
+        results.to_parquet(outpath, partition_cols=['filerLocalId'])
+        print(f'Wrote parquet to {outpath.resolve()}')
 
 
 if __name__ == '__main__':
