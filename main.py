@@ -2,9 +2,11 @@
 """
 import argparse
 from pathlib import Path
+import re
 from time import sleep
 import pandas as pd
 import requests
+from sqlalchemy import create_engine # pylint: disable=import-error
 
 BASE_URL = 'https://netfile.com:443/Connect2/api/public'
 AID = 'COAK'
@@ -183,6 +185,9 @@ def get_filings(get_all=False, filter_amended=False):
 
     print('  - Collected total filings', len(filings))
 
+    # TODO: This filitering function does not work yet.
+    # TODO: Filtering is made more complicated by the fact that an amended id can appear in multiple filings
+    # TODO: It is necessary to group by amendedFilingId and then get max(amendmentSequenceNumber)
     # Find a filing with amendmentSequenceNumber (aka report_num)
     if filter_amended is True:
         amendments = [ filing['id'] for filing in filings if filing['amendmentSequenceNumber'] > 0 ]
@@ -201,6 +206,16 @@ def get_filings(get_all=False, filter_amended=False):
         print(f'  - {len(filings)} left after filtering out amended')
 
     df = pd.DataFrame(filings)
+    df.loc[df['amendedFilingId'].isna(), 'amendedFilingId'] = ''
+    df = df.astype({
+        'id': 'string',
+        'title': 'string',
+        'filerName': 'string',
+        'filerLocalId': 'string',
+        'filerStateId': 'string',
+        'amendedFilingId': 'string'
+    })
+    df['filingDate'] = pd.to_datetime(df['filingDate'], utc=True)
     return df
 
 
@@ -226,6 +241,7 @@ def main():
     parser.add_argument('--save', '-s', action='store_true')
     parser.add_argument('--all', '-a', action='store_true')
     parser.add_argument('--filter-amended', action='store_true')
+    parser.add_argument('--load-database', '-d', action='store_true')
 
     args = parser.parse_args()
 
@@ -253,11 +269,36 @@ def main():
     results = program['function'](**kwargs)
     print(f'Got {len(results)} results for endpoint {endpoint}')
 
+    save_results = args.save or args.load_database
+
     if args.save is True:
+        results['year'] = results['filingDate'].apply(lambda x: x.year)
+
         outpath = Path(args.endpoint)
-        results.to_parquet(outpath, partition_cols=['filerLocalId'])
+        results.to_parquet(outpath, partition_cols=['year'])
         print(f'Wrote parquet to {outpath.resolve()}')
 
+    if args.load_database is True:
+        db_name = 'oakland_pec'
+        engine = create_engine(f'postgresql+psycopg2://localhost:5432/{db_name}')
+
+        with engine.connect() as conn:
+            # res = results.to_sql(table, conn)
+            # df = pd.DataFrame([
+            #     [1, 'Fred', 10, 3.5, 'fire', 3, 'Elf', 'Wizard'],
+            #     [2, 'Ned', 3, 4.65, 'water', 4, 'Dwarf', 'Warlock'],
+            #     [3, 'Ted', 15, 33.0, 'air', 21, 'Human', 'Knight'],
+            #     [4, 'Henrietta', 2, 12.2, 'smoke', 14, 'Halfling', 'Mage'],
+            #     [5, 'Agnes', 44, 2.3, 'wind', 34, 'Orc', 'Witch'],
+            #     [6, 'Magda', 23, 1.2, 'blue', 7, 'Insectoid', 'Brawler']
+            # ], columns=['id', 'name', 'rank', 'power', 'magicType', 'level', 'species', 'role'])
+            results.columns = [ re.sub(r'(?<!^)(?=[A-Z])', '_', c).lower() for c in results.columns ]
+            print(results.columns)
+            res = results.to_sql(args.endpoint, conn, if_exists='replace')
+            print(f'- Inserted {res} records into {args.endpoint} table')
+
+    if save_results is False:
+        print(results)
 
 if __name__ == '__main__':
     main()
