@@ -52,6 +52,74 @@ class PageTracker:
         end = ' ' if not self.done else '\n'
         print(self._cur_page, end=end, flush=True)
 
+class BaseRecord:
+    """ base class for fetching of Netfile data """
+    def __init__(self):
+        self.page = PageTracker()
+        self.records = []
+        self.endpoint = BASE_URL
+        self.headers = HEADERS
+        self.params = PARAMS
+        self.records_key = 'results'
+
+    def fetch(self, pages=1):
+        """ fetch one records or many """
+        self.fetch_first_page()
+
+        if pages > 0:
+            self.page = PageTracker(start_page=1, last_page=pages)
+
+        while self.page.done is False:
+            res = requests.get(
+                self.endpoint,
+                headers=self.headers,
+                params={ **self.params, 'CurrentPageIndex': self.page.cur_page }
+            )
+            res.raise_for_status()
+            body = res.json()
+
+            self.records += body[self.records_key]
+            self.page.incr()
+            self.page.print()
+
+        return self.records
+
+    def fetch_first_page(self):
+        """ fetch the first record to get total page count """
+        res = requests.get(
+            self.endpoint,
+            headers=self.headers,
+            params=self.params
+        )
+        res.raise_for_status()
+        body = res.json()
+
+        self.page = PageTracker(start_page=1, last_page=body['totalMatchingPages'])
+        print(f'Found {body["totalMatchingPages"]} pages')
+        self.records = body[self.records_key]
+        return self.records
+
+class Filing(BaseRecord):
+    """ Get filings """
+    def __init__(self):
+        super().__init__()
+        self.endpoint = f'{BASE_URL}/list/filing'
+        self.records_key = 'filings'
+        self.params = {
+            **self.params,
+            'Application': 'Campaign'
+        }
+
+class FilingTransaction(BaseRecord):
+    """ Get transactions for a filing """
+    def __init__(self, filing_id):
+        super().__init__()
+        self.endpoint = f'{BASE_URL}/campaign/export/cal201/transaction/filing'
+        self.records_key = 'results'
+        self.params = {
+            **self.params,
+            'FilingId': filing_id
+        }
 
 def get_filer_transactions(get_all=False) -> pd.DataFrame:
     """ Get all transactions by filer, returns Pandas DataFrame
@@ -143,6 +211,7 @@ def get_filings(get_all=False, filter_amended=False):
     """ Collect filings, return Pandas DataFrame
     """
     # Collect Campaign filings
+    f = Filing()
     filing_endpoint = f'{BASE_URL}/list/filing'
     params = { **PARAMS, 'Application': 'Campaign'}
     res = requests.get(
@@ -206,31 +275,41 @@ def get_filings(get_all=False, filter_amended=False):
         print(f'  - {len(filings)} left after filtering out amended')
 
     df = pd.DataFrame(filings)
-    df.loc[df['amendedFilingId'].isna(), 'amendedFilingId'] = ''
     df = df.astype({
-        'id': 'string',
+        'id': int,
         'title': 'string',
         'filerName': 'string',
         'filerLocalId': 'string',
-        'filerStateId': 'string',
-        'amendedFilingId': 'string'
+        'filerStateId': int,
+        'amendedFilingId': int
     })
     df['filingDate'] = pd.to_datetime(df['filingDate'], utc=True)
+    df.set_index('id', inplace=True)
     return df
 
-
-def get_transactions_for_filing(filing_id):
+def get_filing_transaction(filing_id, get_all=False):
     """ Get transactions from filing id
     """
-    res = requests.get(
-        f'{BASE_URL}/campaign/export/cal201/transaction/filing',
-        headers=HEADERS,
-        params={ **PARAMS, 'FilingId': filing_id }
-    )
-    res.raise_for_status()
-    body = res.json()
+    transaction = FilingTransaction(filing_id)
+    pages = 0 if get_all is True else 1
 
-    return body['results']
+    results = transaction.fetch(pages=pages)
+
+    return results
+
+def get_filing_transactions(filings: list[dict], get_all=False):
+    """ Get all transactions for all filings """
+    f = Filing()
+    pages = 0 if get_all is True else 1
+    filings = f.fetch(pages=pages)
+
+    transactions = []
+    for filing in filings:
+        t = FilingTransaction(filing['id'])
+        
+        transactions += t.fetch(pages=pages)
+
+    return transactions
 
 def main():
     """ Collect all filings
@@ -242,6 +321,7 @@ def main():
     parser.add_argument('--all', '-a', action='store_true')
     parser.add_argument('--filter-amended', action='store_true')
     parser.add_argument('--load-database', '-d', action='store_true')
+    parser.add_argument('--append', action='store_true')
 
     args = parser.parse_args()
 
@@ -279,22 +359,15 @@ def main():
         print(f'Wrote parquet to {outpath.resolve()}')
 
     if args.load_database is True:
+        if_exists = 'replace' if not args.append else 'append'
         db_name = 'oakland_pec'
         engine = create_engine(f'postgresql+psycopg2://localhost:5432/{db_name}')
 
         with engine.connect() as conn:
-            # res = results.to_sql(table, conn)
-            # df = pd.DataFrame([
-            #     [1, 'Fred', 10, 3.5, 'fire', 3, 'Elf', 'Wizard'],
-            #     [2, 'Ned', 3, 4.65, 'water', 4, 'Dwarf', 'Warlock'],
-            #     [3, 'Ted', 15, 33.0, 'air', 21, 'Human', 'Knight'],
-            #     [4, 'Henrietta', 2, 12.2, 'smoke', 14, 'Halfling', 'Mage'],
-            #     [5, 'Agnes', 44, 2.3, 'wind', 34, 'Orc', 'Witch'],
-            #     [6, 'Magda', 23, 1.2, 'blue', 7, 'Insectoid', 'Brawler']
-            # ], columns=['id', 'name', 'rank', 'power', 'magicType', 'level', 'species', 'role'])
+            # snake_case all the columns
             results.columns = [ re.sub(r'(?<!^)(?=[A-Z])', '_', c).lower() for c in results.columns ]
-            print(results.columns)
-            res = results.to_sql(args.endpoint, conn, if_exists='replace')
+            print(f'- Preparing to insert columns - {results.columns}')
+            res = results.to_sql(args.endpoint, conn, if_exists=if_exists)
             print(f'- Inserted {res} records into {args.endpoint} table')
 
     if save_results is False:
