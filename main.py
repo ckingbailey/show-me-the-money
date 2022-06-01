@@ -4,9 +4,10 @@ import argparse
 from pathlib import Path
 import re
 from time import sleep
+from xmlrpc.client import DateTime
 import pandas as pd
 import requests
-from sqlalchemy import create_engine # pylint: disable=import-error
+from sqlalchemy import create_engine, types as sq_types # pylint: disable=import-error
 
 BASE_URL = 'https://netfile.com:443/Connect2/api/public'
 AID = 'COAK'
@@ -212,45 +213,8 @@ def get_filings(get_all=False, filter_amended=False):
     """
     # Collect Campaign filings
     f = Filing()
-    filing_endpoint = f'{BASE_URL}/list/filing'
-    params = { **PARAMS, 'Application': 'Campaign'}
-    res = requests.get(
-        filing_endpoint,
-        headers=HEADERS,
-        params=params
-    )
-    res.raise_for_status()
-
-    body = res.json()
-    filings = body['filings']
-    num_pages = body['totalMatchingPages']
-    print('Filings', end='\n—\n')
-    print(
-        f'filings returned: {len(filings)}',
-        f'total filings: {body["totalMatchingCount"]}',
-        f'total pages: {num_pages}', sep=' | '
-    )
-    print('  - Sample filing', filings[0])
-
-    if get_all is True:
-        page = PageTracker(last_page=num_pages)
-        page.print()
-        while page < num_pages:
-            page.incr()
-            res = requests.get(
-                filing_endpoint,
-                headers=HEADERS,
-                params={ **params, 'CurrentPageIndex': page.cur_page}
-            )
-            res.raise_for_status()
-            page.print()
-
-            body = res.json()
-            filings += body['filings']
-
-            sleep_time = .1 if page.cur_page % 10 == 0 else .25
-            sleep(sleep_time)
-
+    pages = 0 if get_all is True else 1
+    filings = f.fetch(pages=pages)
 
     print('  - Collected total filings', len(filings))
 
@@ -276,12 +240,12 @@ def get_filings(get_all=False, filter_amended=False):
 
     df = pd.DataFrame(filings)
     df = df.astype({
-        'id': int,
+        'id': 'string',
         'title': 'string',
         'filerName': 'string',
         'filerLocalId': 'string',
-        'filerStateId': int,
-        'amendedFilingId': int
+        'filerStateId': 'string',
+        'amendedFilingId': 'string'
     })
     df['filingDate'] = pd.to_datetime(df['filingDate'], utc=True)
     df.set_index('id', inplace=True)
@@ -365,9 +329,25 @@ def main():
 
         with engine.connect() as conn:
             # snake_case all the columns
-            results.columns = [ re.sub(r'(?<!^)(?=[A-Z])', '_', c).lower() for c in results.columns ]
+            # results.columns = [ re.sub(r'(?<!^)(?=[A-Z])', '_', c).lower() for c in results.columns ]
             print(f'- Preparing to insert columns - {results.columns}')
-            res = results.to_sql(args.endpoint, conn, if_exists=if_exists)
+            res = results.to_sql(args.endpoint, conn,
+                if_exists=if_exists,
+                dtype={
+                    'id': sq_types.BigInteger,
+                    'agency': sq_types.Integer,
+                    'isEfiled': sq_types.Boolean,
+                    'hasImage': sq_types.Boolean,
+                    'filingDate': sq_types.DateTime,
+                    'title': sq_types.String,
+                    'form': sq_types.Integer,
+                    'filerName': sq_types.String,
+                    'filerLocalId': sq_types.String,
+                    'filerStateId': sq_types.String,
+                    'amendmentSequenceNumber': sq_types.Integer,
+                    'amendedFilingId': sq_types.BigInteger
+                }
+            )
             print(f'- Inserted {res} records into {args.endpoint} table')
 
     if save_results is False:
