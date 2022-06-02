@@ -53,6 +53,80 @@ class PageTracker:
         end = ' ' if not self.done else '\n'
         print(self._cur_page, end=end, flush=True)
 
+class NetfileClient:
+    """ Query Netfile """
+    page = PageTracker()
+    base_url = 'https://netfile.com:443/Connect2/api/public'
+    headers = { 'Accept': 'application/json' }
+    params = { 'aid': 'COAK' }
+    records_key = 'results'
+    filing = {
+        'params': {},
+        'records_key': 'filings',
+        'path': '/list/filing'
+    }
+    transaction = {
+        'records_key': 'results',
+        'path': '/campaign/export/cal201/transaction',
+        'by': {
+            'filing': '/filing',
+            'filer': '/filer'
+        }
+    }
+
+    @classmethod
+    def fetch(cls, endpoint, pages=1, by=None, by_data=None):
+        """ fetch one record or many """
+        res = cls.fetch_first_page(endpoint)
+        last_page = res['totalMatchingPages']
+        records_key = res['records_key']
+        records = res[records_key]
+
+        url = res.url
+
+        page = (PageTracker(start_page=2, last_page=pages)
+            if pages > 0
+            else PageTracker(start_page=2, last_page=last_page))
+
+        while page.done is False:
+            params = {
+                **cls.parms,
+                'CurrentPageIndex': page.cur_page
+            }
+            res = requests.get(
+                url,
+                headers=cls.headers,
+                params=params
+            )
+            res.raise_for_status()
+            body = res.json()
+
+            records += body[records_key]
+            page.incr()
+            page.print()
+
+        return records
+
+    @classmethod
+    def fetch_first_page(cls, endpoint):
+        """ fetch the first record to get the total page count """
+        endpoint_config = getattr(cls, endpoint)
+        path = endpoint_config['path']
+        url = f'{cls.base_url}{path}'
+        records_key = endpoint_config['records_key']
+        res = requests.get(
+            url,
+            headers=cls.headers,
+            params=cls.params
+        )
+        res.raise_for_status()
+        body = res.json()
+
+        return {
+            **body,
+            'records_key': records_key
+        }
+
 class BaseRecord:
     """ base class for fetching of Netfile data """
     def __init__(self):
