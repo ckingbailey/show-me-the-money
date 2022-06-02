@@ -62,6 +62,8 @@ class BaseRecord:
         self.headers = HEADERS
         self.params = PARAMS
         self.records_key = 'results'
+        self.sql_dtypes = {}
+        self.df = pd.DataFrame()
 
     def fetch(self, pages=1):
         """ fetch one records or many """
@@ -100,6 +102,14 @@ class BaseRecord:
         self.records = body[self.records_key]
         return self.records
 
+    def to_sql(self, table_name, conn, if_exists='fail'):
+        """ prepare columns for insertion into sql table """
+        self.df = pd.DataFrame(self.records)
+        res = self.df.to_sql(table_name, conn,
+            if_exists=if_exists,
+            dtype=self.sql_dtypes)
+        return res
+
 class Filing(BaseRecord):
     """ Get filings """
     def __init__(self):
@@ -109,6 +119,20 @@ class Filing(BaseRecord):
         self.params = {
             **self.params,
             'Application': 'Campaign'
+        }
+        self.sql_dtypes = {
+            'id': sq_types.BigInteger,
+            'agency': sq_types.Integer,
+            'isEfiled': sq_types.Boolean,
+            'hasImage': sq_types.Boolean,
+            'filingDate': sq_types.DateTime,
+            'title': sq_types.String,
+            'form': sq_types.Integer,
+            'filerName': sq_types.String,
+            'filerLocalId': sq_types.String,
+            'filerStateId': sq_types.String,
+            'amendmentSequenceNumber': sq_types.Integer,
+            'amendedFilingId': sq_types.BigInteger
         }
 
 class FilingTransaction(BaseRecord):
@@ -121,6 +145,7 @@ class FilingTransaction(BaseRecord):
             **self.params,
             'FilingId': filing_id
         }
+        self.sql_dtypes = {}
 
 def get_filer_transactions(get_all=False) -> pd.DataFrame:
     """ Get all transactions by filer, returns Pandas DataFrame
@@ -261,6 +286,27 @@ def get_filing_transaction(filing_id, get_all=False):
 
     return results
 
+def get_transactions(get_all=False, by='filing', data_by:pd.DataFrame=pd.DataFrame()):
+    program = {
+        'filing': {
+            'function': get_filing_transaction,
+            'foreign_key': 'id',
+            'records_key': 'results'
+        },
+        'filer': {
+            'function': get_filer_transactions,
+            'foreign_key': 'localAgencyId',
+            'records_key': 'results'
+        }
+    }
+    
+    transactions = []
+    for row in data_by:
+        res = program[by]['function'](row['foreign_key'], get_all=get_all)
+        transactions += res['results']
+
+    return transactions
+
 def get_filing_transactions(filings: list[dict], get_all=False):
     """ Get all transactions for all filings """
     f = Filing()
@@ -280,7 +326,8 @@ def main():
         and see if we can find the report_num key
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('--endpoint', '-e', required=True, choices=[ 'transactions', 'filings' ])
+    endpoints_opts = [ 'transactions', 'filings' ]
+    parser.add_argument('--endpoint', '-e', required=True, choices=endpoints_opts)
     parser.add_argument('--save', '-s', action='store_true')
     parser.add_argument('--all', '-a', action='store_true')
     parser.add_argument('--filter-amended', action='store_true')
@@ -291,13 +338,13 @@ def main():
 
     programs = {
         'transactions': {
-            'function': get_filer_transactions,
+            'function': get_transactions,
             'args': []
         },
         'filings': {
             'function': get_filings,
             'args': [ 'filter_amended' ]
-        }
+        },
     }
     endpoint = args.endpoint
     print(f'Program: {endpoint}')
@@ -332,21 +379,7 @@ def main():
             # results.columns = [ re.sub(r'(?<!^)(?=[A-Z])', '_', c).lower() for c in results.columns ]
             print(f'- Preparing to insert columns - {results.columns}')
             res = results.to_sql(args.endpoint, conn,
-                if_exists=if_exists,
-                dtype={
-                    'id': sq_types.BigInteger,
-                    'agency': sq_types.Integer,
-                    'isEfiled': sq_types.Boolean,
-                    'hasImage': sq_types.Boolean,
-                    'filingDate': sq_types.DateTime,
-                    'title': sq_types.String,
-                    'form': sq_types.Integer,
-                    'filerName': sq_types.String,
-                    'filerLocalId': sq_types.String,
-                    'filerStateId': sq_types.String,
-                    'amendmentSequenceNumber': sq_types.Integer,
-                    'amendedFilingId': sq_types.BigInteger
-                }
+                if_exists=if_exists
             )
             print(f'- Inserted {res} records into {args.endpoint} table')
 
