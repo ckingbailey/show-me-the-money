@@ -40,9 +40,13 @@ class PageTracker:
         return self._cur_page
 
     @property
+    def last_page(self):
+        return self._last_page
+
+    @property
     def done(self):
         """ Is cur_page the last_page? """
-        return self._cur_page == self._last_page
+        return self._cur_page >= self._last_page
 
     def incr(self):
         """ Add 1 to current page"""
@@ -50,82 +54,164 @@ class PageTracker:
 
     def print(self):
         """ Print current page without newline """
-        end = ' ' if not self.done else '\n'
+        end = ' ' if self.done is False else '\n'
         print(self._cur_page, end=end, flush=True)
 
 class NetfileClient:
     """ Query Netfile """
     page = PageTracker()
-    base_url = 'https://netfile.com:443/Connect2/api/public'
-    headers = { 'Accept': 'application/json' }
-    params = { 'aid': 'COAK' }
     records_key = 'results'
-    filing = {
-        'params': {},
-        'records_key': 'filings',
-        'path': '/list/filing'
-    }
-    transaction = {
-        'records_key': 'results',
-        'path': '/campaign/export/cal201/transaction',
-        'by': {
-            'filing': '/filing',
-            'filer': '/filer'
-        }
-    }
 
-    @classmethod
-    def fetch(cls, endpoint, pages=1, by=None, by_data=None):
+    def __init__(self):
+        self.base_url = 'https://netfile.com:443/Connect2/api/public'
+        self.headers = { 'Accept': 'application/json' }
+        self.params = { 'aid': 'COAK' }
+
+        # endpoints
+        self.filings = FilingsClient()
+        self.transactions = TransactionsClient()
+
+
+class BaseEndpointClient:
+    """ provide generic fetch function for Netfile endpoints """
+    def __init__(self):
+        self.base_url = 'https://netfile.com:443/Connect2/api/public'
+        self._path = ''
+        self._url = f'{self.base_url}{self._path}'
+        self.headers = { 'Accept': 'application/json' }
+        self.params = { 'aid': 'COAK' }
+        self.records_key = 'results'
+
+    @property
+    def path(self):
+        """ path getter """
+        return self._path
+
+    @path.setter
+    def path(self, p):
+        self._path = p
+        self._url = f'{self.base_url}{self.path}'
+
+    @property
+    def url(self):
+        """ url getter """
+        return self._url
+
+    def fetch(self, pages=1):
         """ fetch one record or many """
-        res = cls.fetch_first_page(endpoint)
-        last_page = res['totalMatchingPages']
-        records_key = res['records_key']
-        records = res[records_key]
+        res = requests.get(
+            self.url,
+            headers=self.headers,
+            params=self.params
+        )
+        res.raise_for_status()
+
+        body = res.json()
+        last_page = body['totalMatchingPages']
+        print(f'Found {last_page} total matching pages')
+        records_key = self.records_key
+        records = body[records_key]
 
         url = res.url
 
-        page = (PageTracker(start_page=2, last_page=pages)
+        page = (PageTracker(start_page=1, last_page=pages)
             if pages > 0
-            else PageTracker(start_page=2, last_page=last_page))
+            else PageTracker(start_page=1, last_page=last_page))
+        page.print()
+        page.incr()
 
         while page.done is False:
             params = {
-                **cls.parms,
+                **self.params,
                 'CurrentPageIndex': page.cur_page
             }
             res = requests.get(
                 url,
-                headers=cls.headers,
+                headers=self.headers,
                 params=params
             )
             res.raise_for_status()
             body = res.json()
 
             records += body[records_key]
-            page.incr()
+            # page.print()
             page.print()
+            page.incr()
 
         return records
 
-    @classmethod
-    def fetch_first_page(cls, endpoint):
-        """ fetch the first record to get the total page count """
-        endpoint_config = getattr(cls, endpoint)
-        path = endpoint_config['path']
-        url = f'{cls.base_url}{path}'
-        records_key = endpoint_config['records_key']
-        res = requests.get(
-            url,
-            headers=cls.headers,
-            params=cls.params
-        )
-        res.raise_for_status()
-        body = res.json()
-
-        return {
-            **body,
-            'records_key': records_key
+class FilingsClient(BaseEndpointClient):
+    """ Fetch filings """
+    def __init__(self):
+        super().__init__()
+        self.path = '/list/filing'
+        self.records_key = 'filings'
+        self.params = {
+            **self.params,
+            'Application': 'Campaign'
         }
+
+class TransactionsClient(BaseEndpointClient):
+    """ Fetch transactions """
+    def __init__(self):
+        super().__init__()
+        self.path = '/campaign/export/cal201/transaction'
+        self.by = {
+            'filing': {
+                'key': 'id',
+                'param': 'FilingId'
+            },
+            'filer': {
+                'key': 'localAgencyId',
+                'param': 'FilerId'
+            }
+        }
+
+    def fetch(self, pages=1, by='', by_data=None):
+        """ loop thru all by_data,
+            for each by_key, fetch self.url with param by_key
+        """
+        self.path += f'/{by}'
+        key = self.by[by]['key']
+        request_param = self.by[by]['param']
+
+        records = []
+        for i, row in enumerate(by_data):
+            foreign_key = row[key]
+            params = {
+                **self.params,
+                request_param: foreign_key
+            }
+            res = requests.get(self.url, headers=self.headers, params=params)
+            res.raise_for_status()
+            body = res.json()
+
+            records += body[self.records_key]
+
+            last_page = body['totalMatchingCount']
+            print(f'{i} Found {last_page} total matching pages for {by} {foreign_key}')
+            page_params = {
+                'start_page': 1,
+                'last_page': pages if pages > 0 else last_page
+            }
+            page = PageTracker(**page_params)
+            page.print()
+            page.incr()
+
+            while page.done is False:
+                res = requests.get(self.url, headers=self.headers, params={
+                    **params,
+                    'CurrentPageIndex': page.cur_page
+                })
+                res.raise_for_status()
+
+                body = res.json()
+                records += body[self.records_key]
+
+                page.print()
+                page.incr()
+
+        return records
 
 class BaseRecord:
     """ base class for fetching of Netfile data """
