@@ -122,6 +122,23 @@
         },
         "response": {}
     },
+    "/campaign/list/filer": {
+        "request_params": {
+            "AID": "str"
+        },
+        "response": {
+            "filers": [
+                {
+                  "id": "b9e1f962d77a4e85a224a2a800ea2d66",
+                  "agency": "COAK",
+                  "application": "Campaign",
+                  "fppcId": "1304614",
+                  "localAgencyId": "COAK-152912",
+                  "name": "Kerry Hamill For City Council"
+                }
+            ]
+        }
+    },
     "/list/filing": {
         "request_params": {
             "AID": "str",
