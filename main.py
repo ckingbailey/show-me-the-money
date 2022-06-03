@@ -71,7 +71,6 @@ class NetfileClient:
         self.filings = FilingsClient()
         self.transactions = TransactionsClient()
 
-
 class BaseEndpointClient:
     """ provide generic fetch function for Netfile endpoints """
     def __init__(self):
@@ -216,51 +215,9 @@ class TransactionsClient(BaseEndpointClient):
 class BaseRecord:
     """ base class for fetching of Netfile data """
     def __init__(self):
-        self.page = PageTracker()
         self.records = []
-        self.endpoint = BASE_URL
-        self.headers = HEADERS
-        self.params = PARAMS
-        self.records_key = 'results'
         self.sql_dtypes = {}
         self.df = pd.DataFrame()
-
-    def fetch(self, pages=1):
-        """ fetch one records or many """
-        self.fetch_first_page()
-
-        if pages > 0:
-            self.page = PageTracker(start_page=1, last_page=pages)
-
-        while self.page.done is False:
-            res = requests.get(
-                self.endpoint,
-                headers=self.headers,
-                params={ **self.params, 'CurrentPageIndex': self.page.cur_page }
-            )
-            res.raise_for_status()
-            body = res.json()
-
-            self.records += body[self.records_key]
-            self.page.incr()
-            self.page.print()
-
-        return self.records
-
-    def fetch_first_page(self):
-        """ fetch the first record to get total page count """
-        res = requests.get(
-            self.endpoint,
-            headers=self.headers,
-            params=self.params
-        )
-        res.raise_for_status()
-        body = res.json()
-
-        self.page = PageTracker(start_page=1, last_page=body['totalMatchingPages'])
-        print(f'Found {body["totalMatchingPages"]} pages')
-        self.records = body[self.records_key]
-        return self.records
 
     def to_sql(self, table_name, conn, if_exists='fail'):
         """ prepare columns for insertion into sql table """
@@ -274,12 +231,6 @@ class Filing(BaseRecord):
     """ Get filings """
     def __init__(self):
         super().__init__()
-        self.endpoint = f'{BASE_URL}/list/filing'
-        self.records_key = 'filings'
-        self.params = {
-            **self.params,
-            'Application': 'Campaign'
-        }
         self.sql_dtypes = {
             'id': sq_types.BigInteger,
             'agency': sq_types.Integer,
@@ -297,15 +248,109 @@ class Filing(BaseRecord):
 
 class FilingTransaction(BaseRecord):
     """ Get transactions for a filing """
-    def __init__(self, filing_id):
+    def __init__(self):
         super().__init__()
-        self.endpoint = f'{BASE_URL}/campaign/export/cal201/transaction/filing'
-        self.records_key = 'results'
-        self.params = {
-            **self.params,
-            'FilingId': filing_id
+        self.dtypes = {
+            'amountType',
+            'amt_Incur',
+            'amt_Paid',
+            'bakRef_TID',
+            'bal_Juris',
+            'bal_Name',
+            'bal_Num',
+            'beg_Bal',
+            'calculated_Amount',
+            'calculated_Date',
+            'cand_NamF',
+            'cand_NamL',
+            'cand_NamS',
+            'cand_NamT',
+            'cmte_Id',
+            'dist_No',
+            'elec_Date',
+            'end_Bal',
+            'entity_Cd',
+            'externalId',
+            'filerLocalId',
+            'filerName',
+            'filerStateId',
+            'filingEndDate',
+            'filingId',
+            'filingStartDate',
+            'form_Type',
+            'g_From_E_F',
+            'int_CmteId',
+            'int_Rate',
+            'intr_Adr1',
+            'intr_Adr2',
+            'intr_City',
+            'intr_Emp',
+            'intr_NamF',
+            'intr_NamL',
+            'intr_NamS',
+            'intr_NamT',
+            'intr_Occ',
+            'intr_ST',
+            'intr_Self',
+            'intr_Zip4',
+            'juris_Cd',
+            'juris_Dscr',
+            'latitude',
+            'lender_Name',
+            'loan_Amt1',
+            'loan_Amt2',
+            'loan_Amt3',
+            'loan_Amt4',
+            'loan_Amt5',
+            'loan_Amt6',
+            'loan_Amt7',
+            'loan_Amt8',
+            'loan_Date1',
+            'loan_Date2',
+            'loan_Rate',
+            'longitude',
+            'memo_Code',
+            'memo_RefNo',
+            'netFileKey',
+            'off_S_H_Cd',
+            'office_Cd',
+            'office_Dscr',
+            'rec_Type',
+            'sup_Opp_Cd',
+            'tran_Adr1',
+            'tran_Adr2',
+            'tran_Amt1',
+            'tran_Amt2',
+            'tran_ChkNo',
+            'tran_City',
+            'tran_Code',
+            'tran_Date',
+            'tran_Date1',
+            'tran_Dscr',
+            'tran_Emp',
+            'tran_Id',
+            'tran_NamF',
+            'tran_NamL',
+            'tran_NamS',
+            'tran_NamT',
+            'tran_Occ',
+            'tran_ST',
+            'tran_Self',
+            'tran_Type',
+            'tran_Zip4',
+            'transactionType',
+            'tres_Adr1',
+            'tres_Adr2',
+            'tres_City',
+            'tres_NamF',
+            'tres_NamL',
+            'tres_NamS',
+            'tres_NamT',
+            'tres_ST',
+            'tres_Zip4',
+            'xref_Match',
+            'xref_SchNum'
         }
-        self.sql_dtypes = {}
 
 def get_filer_transactions(get_all=False) -> pd.DataFrame:
     """ Get all transactions by filer, returns Pandas DataFrame
@@ -397,7 +442,7 @@ def get_filings(get_all=False, filter_amended=False):
     """ Collect filings, return Pandas DataFrame
     """
     # Collect Campaign filings
-    f = Filing()
+    f = NetfileClient().filings
     pages = 0 if get_all is True else 1
     filings = f.fetch(pages=pages)
 
@@ -436,17 +481,18 @@ def get_filings(get_all=False, filter_amended=False):
     df.set_index('id', inplace=True)
     return df
 
-def get_filing_transaction(filing_id, get_all=False):
+def get_filing_transaction(filings, get_all=False):
     """ Get transactions from filing id
     """
-    transaction = FilingTransaction(filing_id)
+    transaction = NetfileClient().transactions
     pages = 0 if get_all is True else 1
 
-    results = transaction.fetch(pages=pages)
+    results = transaction.fetch(pages=pages, by='filing', by_data=filings)
 
     return results
 
 def get_transactions(get_all=False, by='filing', data_by:pd.DataFrame=pd.DataFrame()):
+    """ Get transactions by either filing or filer """
     program = {
         'filing': {
             'function': get_filing_transaction,
@@ -469,15 +515,15 @@ def get_transactions(get_all=False, by='filing', data_by:pd.DataFrame=pd.DataFra
 
 def get_filing_transactions(filings: list[dict], get_all=False):
     """ Get all transactions for all filings """
-    f = Filing()
+    f = NetfileClient().filings
     pages = 0 if get_all is True else 1
     filings = f.fetch(pages=pages)
 
     transactions = []
     for filing in filings:
-        t = FilingTransaction(filing['id'])
+        t = NetfileClient().transactions
         
-        transactions += t.fetch(pages=pages)
+        transactions += t.fetch(pages=pages, by='filing', by_data=filings)
 
     return transactions
 
