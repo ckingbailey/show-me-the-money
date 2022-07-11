@@ -1,0 +1,15 @@
+[
+    "\nfiler_id\n",
+    "filer_name",
+    "election_year",
+    "recipient_name",
+    "amount",
+    "expenditure_date",
+    "expenditure_type",
+    "expenditure_description",
+    "recipient_address",
+    "recipient_location",
+    "office",
+    "jurisdiction",
+    "party"
+]
