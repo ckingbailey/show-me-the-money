@@ -5,8 +5,10 @@ from pathlib import Path
 import requests
 
 BASE_URL = 'https://netfile.com/api/campaign'
+CONTRIBUTION_FORM = 'F460A'
+EXPENDITURE_FORM = 'F460E'
 
-params = { 'aid': 'COAK' }
+PARAMS = { 'aid': 'COAK' }
 env_vars = {
     ln.split('=')[0]: ln.split('=')[1]
     for ln
@@ -16,14 +18,18 @@ auth = (env_vars['api_key'], env_vars['api_secret'])
 
 pp = PrettyPrinter()
 
-def get_filing():
+def get_filing(offset=0):
     """ Get a filing
     """
     url = f'{BASE_URL}/filing/v101/filings'
 
+    params = { **PARAMS }
+    if offset > 0:
+        params['offset'] = offset
+
     res = requests.get(url, params=params, auth=auth)
     body = res.json()
-    
+
     return body['results']
 
 def get_transaction(filing):
@@ -34,7 +40,7 @@ def get_transaction(filing):
     res = requests.get(url, params={
         'filingNid': filing['filingNid'],
         'parts': 'All',
-        **params
+        **PARAMS
     }, auth=auth)
     body = res.json()
 
@@ -45,7 +51,7 @@ def list_elections():
     """
     url = f'{BASE_URL}/election/v101/elections'
 
-    res = requests.get(url, params=params, auth=auth)
+    res = requests.get(url, params=PARAMS, auth=auth)
     body = res.json()
 
     return body['results']
@@ -55,7 +61,7 @@ def get_filer(filer_nid):
     """
     url = f'{BASE_URL}/filer/v101/filers'
 
-    res = requests.get(url, params={ **params, 'filerNid': filer_nid }, auth=auth)
+    res = requests.get(url, params={ **PARAMS, 'filerNid': filer_nid }, auth=auth)
     body = res.json()
 
     return body['results']
@@ -65,30 +71,56 @@ if __name__ == '__main__':
     print('----- FILING -----')
     pp.pprint(filings[0])
 
-    for f in filings:
-        transactions = get_transaction(f)
-        if len(transactions) > 0:
+    query_count = 0
+    results_len = []
+    transactions = []
+    for i, f in enumerate(filings):
+        next_trans = get_transaction(f)
+        results_len.append(len(next_trans))
+        transactions += next_trans
+        query_count += 1
+        if len(next_trans) > 0:
+            tran_filing = i
             break
 
-    # pp.pprint(transactions[0])
-    one_transaction = [ t for t in transactions if t['calTransactionType'] == 'F460A' ][0]
     print('----- TRANSACTION -----')
-    pp.pprint(one_transaction)
+    print('--------- Contribution -----')
+    one_contrib = [ t for t in transactions if t['calTransactionType'] == CONTRIBUTION_FORM ][0]
+    pp.pprint(one_contrib)
+    expenditures = [ t for t in transactions if t['calTransactionType'] == EXPENDITURE_FORM ]
 
-    address_types = {
-        a['addressType'] for t in transactions for a in t['addresses']
-    }
-    print('---- ADDRESS TYPES -----')
-    pp.pprint(address_types)
+    if len(expenditures) < 1:
+        remaining_filings = filings[tran_filing + 1:]
+        for i, f in enumerate(remaining_filings):
+            next_trans = get_transaction(f)
+            results_len.append(len(next_trans))
+            transactions += next_trans
+            query_count += 1
+            expenditures = [ t for t in next_trans if t['calTransactionType'] == EXPENDITURE_FORM ]
 
-    filer = get_filer(one_transaction['filerNid'])
-    print('----- FILER -----')
-    pp.pprint(filer)
+    if len(expenditures) > 0:
+        tran_filing = tran_filing + i
+        print('--------- Expenditure -----')
+        pp.pprint(expenditures[0])
 
-    elections = list_elections()
-    pp.pprint(elections[0])
+    print('----- ALL FORM TYPES -----')
+    pp.pprint(set(t['calTransactionType'] for t in transactions))
 
-    election_dates = [ e['electionDate'] for e in elections ]
-    print('----- ELECTION DATES -----')
-    pp.pprint(election_dates)
+    print('----- ARE THERE ANY tranDscr AT ALL? -----')
+    pp.pprint(set(t['transaction']['tranDscr'] for t in transactions))
 
+    print('----- METRICS -----')
+    print('Total number of transaction queries', len(results_len))
+    print('Total number of transactions', sum(results_len))
+    print('Avg size of transaction results', sum(results_len) / len(results_len))
+
+    # filer = get_filer(one_contrib['filerNid'])
+    # print('----- FILER -----')
+    # pp.pprint(filer)
+
+    # elections = list_elections()
+    # pp.pprint(elections[0])
+
+    # election_dates = [ e['electionDate'] for e in elections ]
+    # print('----- ELECTION DATES -----')
+    # pp.pprint(election_dates)
