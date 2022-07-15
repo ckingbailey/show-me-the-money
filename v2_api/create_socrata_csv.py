@@ -20,6 +20,8 @@ from pathlib import Path
 import pandas as pd
 import requests
 
+CONTRIBUTION_FORM = 'F460A'
+EXPENDITURE_FORM = 'F460E'
 BASE_URL = 'https://netfile.com/api/campaign'
 PARAMS = { 'aid': 'COAK' }
 AUTH = tuple(v for k,v in sorted(
@@ -28,10 +30,20 @@ AUTH = tuple(v for k,v in sorted(
 ))
 TIMEOUT = 7
 
+class TimeoutAdapter(requests.adapters.HTTPAdapter):
+    """ Will this allow me to retry on timeout? """
+    def __init__(self, *args, **kwargs):
+        self.timeout = kwargs.pop('timeout', TIMEOUT)
+        super().__init__(*args, **kwargs)
+
+    def send(self, request, *args, **kwargs):
+        kwargs['timeout'] = kwargs.get('timeout', self.timeout)
+        return super().send(request, *args, **kwargs)
+
 session = requests.Session()
 session.hooks['response'] = [ lambda response, *args, **kwargs: response.raise_for_status() ]
-retry_strategy = requests.adapters.Retry(total=3, backoff_factor=1)
-adapter = requests.adapters.HTTPAdapter(max_retries=retry_strategy)
+retry_strategy = requests.adapters.Retry(total=5, backoff_factor=1)
+adapter = TimeoutAdapter(max_retries=retry_strategy)
 session.mount('https://', adapter)
 
 def get_filings(offset=0) -> tuple[pd.DataFrame, dict]:
@@ -43,7 +55,7 @@ def get_filings(offset=0) -> tuple[pd.DataFrame, dict]:
     if offset > 0:
         params['offset'] = offset
 
-    res = session.get(f'{BASE_URL}/filing/v101/filings', params=params, auth=AUTH, timeout=TIMEOUT)
+    res = session.get(f'{BASE_URL}/filing/v101/filings', params=params, auth=AUTH)
     body = res.json()
 
     return pd.DataFrame([
@@ -73,7 +85,14 @@ def get_transactions(filing_nid, offset=0) -> tuple[pd.DataFrame, dict]:
         'contributor_type',
         'contributor_address',
         'contributor_location',
-        'amount'
+        'amount',
+        'expenditure_type',
+        'expenditure_description',
+        'form',
+        'election_year',
+        'office',
+        'jurisdiction',
+        'party'
     ]
 
     params = {
@@ -85,14 +104,14 @@ def get_transactions(filing_nid, offset=0) -> tuple[pd.DataFrame, dict]:
     if offset > 0:
         params['offset'] = offset
 
-    res = session.get(f'{BASE_URL}/cal/v101/transaction-elements', params=params, auth=AUTH, timeout=TIMEOUT)
+    res = session.get(f'{BASE_URL}/cal/v101/transaction-elements', params=params, auth=AUTH)
     body = res.json()
 
-    return pd.DataFrame([
+    transaction_data = [
         {
             'filing_nid': filing_nid,
             'contributor_name': result['allNames'],
-            'contributor_type': result['transaction']['entityCd'],
+            'contributor_type': 'Individual' if result['transaction']['entityCd'] == 'IND' else 'Organization',
             'contributor_address': ' '.join([
                 str(result['addresses'][0].get('line1', '')),
                 str(result['addresses'][0].get('line2', '')),
@@ -103,10 +122,18 @@ def get_transactions(filing_nid, offset=0) -> tuple[pd.DataFrame, dict]:
             'contributor_location': (
                 result['addresses'][0]['latitude'], result["addresses"][0]['longitude']
              ) if len(result['addresses']) > 0 else tuple(),
-             'amount': result['calculatedAmount']
+            'amount': result['calculatedAmount'],
+            'expenditure_type': result['transaction']['tranCode'],
+            'expenditure_description': result['transaction']['tranDscr'],
+            'form': result['calTransactionType'],
+            'election_year': None,
+            'office': None,
+            'jurisdiction': None,
+            'party': None,
         }
         for result in body['results']
-    ], columns=tran_cols), {
+    ]
+    return pd.DataFrame(transaction_data, columns=tran_cols), {
         'page_number': body['pageNumber'],
         'has_next_page': body['hasNextPage'],
         'total': body['totalCount'],
@@ -177,7 +204,11 @@ def main():
     pd.set_option('max_colwidth', 12)
     print(df.head(12))
 
-    csv_cols = [
+    df.to_csv('all_trans_raw.csv', index=False)
+
+    contrib_df = df[df['form'] == CONTRIBUTION_FORM]
+    contrib_cols = [
+        'filer_id',
         'filer_name',
         'contributor_name',
         'contributor_type',
@@ -185,7 +216,31 @@ def main():
         'amount',
         'receipt_date'
     ]
-    df[csv_cols].to_csv('contribs_socrata.csv')
+    contrib_df[contrib_cols].to_csv('contribs_socrata.csv', index=False)
+
+    expend_cols = [
+        'filer_id',
+        'filer_name',
+        'recipient_name',
+        'expenditure_type',
+        'recipient_address',
+        'recipient_location',
+        'expenditure_description',
+        'amount',
+        'expenditure_date',
+        'election_year',
+        'office',
+        'jurisdiction',
+        'party'
+    ]
+    expend_df = df[df['form'] == EXPENDITURE_FORM].rename(columns={
+        'contributor_name': 'recipient_name',
+        'contributor_address': 'recipient_address',
+        'contributor_location': 'recipient_location',
+        'receipt_date': 'expenditure_date'
+    })[expend_cols]
+    print(expend_df.head(), len(expend_df.index), sep='\n')
+    expend_df.to_csv('expends_socrata.csv', index=False)
 
 if __name__ == '__main__':
     main()
