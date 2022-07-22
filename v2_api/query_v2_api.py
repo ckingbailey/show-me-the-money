@@ -29,8 +29,9 @@ def get_filing(offset=0):
 
     res = requests.get(url, params=params, auth=auth)
     body = res.json()
+    results = body.pop('results')
 
-    return body['results']
+    return results, body
 
 def get_transaction(filing):
     """ Get a transaction
@@ -67,7 +68,9 @@ def get_filer(filer_nid):
     return body['results']
 
 if __name__ == '__main__':
-    filings = get_filing()
+    filings, meta = get_filing()
+    print('----- METADATA returned from API -----')
+    pp.pprint(meta)
     print('----- FILING -----')
     pp.pprint(filings[0])
 
