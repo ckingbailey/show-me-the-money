@@ -88,9 +88,13 @@ if __name__ == '__main__':
 
     print('----- TRANSACTION -----')
     print('--------- Contribution -----')
-    one_contrib = [ t for t in transactions if t['calTransactionType'] == CONTRIBUTION_FORM ][0]
+    contributions = [ t for t in transactions if t['calTransactionType'] == CONTRIBUTION_FORM ]
+    print('How many contributions?', len(contributions))
+    one_contrib = contributions[0]
     pp.pprint(one_contrib)
     expenditures = [ t for t in transactions if t['calTransactionType'] == EXPENDITURE_FORM ]
+    print('How many expenditures', len(expenditures))
+    print('How many total transactions?', len(transactions))
 
     if len(expenditures) < 1:
         remaining_filings = filings[tran_filing + 1:]
@@ -117,13 +121,18 @@ if __name__ == '__main__':
     print('Total number of transactions', sum(results_len))
     print('Avg size of transaction results', sum(results_len) / len(results_len))
 
-    # filer = get_filer(one_contrib['filerNid'])
-    # print('----- FILER -----')
-    # pp.pprint(filer)
+    for t in transactions:
+        filer = get_filer(t['filerNid'])
+        if filer[0]['candidateName'] is not None:
+            break
 
-    # elections = list_elections()
-    # pp.pprint(elections[0])
+    print('----- FILER -----')
+    pp.pprint(filer)
 
-    # election_dates = [ e['electionDate'] for e in elections ]
-    # print('----- ELECTION DATES -----')
-    # pp.pprint(election_dates)
+
+    elections = list_elections()
+    pp.pprint(elections[0])
+
+    election_dates = [ e['electionDate'] for e in elections ]
+    print('----- ELECTION DATES -----')
+    pp.pprint(election_dates)
