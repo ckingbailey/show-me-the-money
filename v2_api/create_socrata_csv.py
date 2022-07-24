@@ -18,6 +18,7 @@ Socrata required fields:
 """
 import json
 from pathlib import Path
+from random import uniform
 import pandas as pd
 import requests
 from .query_v2_api import get_filer
@@ -124,11 +125,47 @@ def get_all_trans_for_filing(filing_nid):
 def df_from_filings(filings):
     """ Transform filings into Pandas DataFrame """
     return pd.DataFrame([{
-        'filer_id': f['filerMeta']['filerId'],
-        'filer_name': f['filerMeta']['commonName'],
+        'filer_nid': f['filerMeta']['filerId'],
         'filing_nid': f['filingNid'],
         'receipt_date': f['calculatedDate']
     } for f in filings ])
+
+def get_location(addresses):
+    """ Get (long, lat) from addresses, or return empty string """
+    if len(addresses) <= 0:
+        return ''
+
+    address = addresses[0]
+    long = address['longitude']
+    lat = address['latitude']
+
+    if long is None or lat is None:
+        return ''
+
+    long_range = (0.2275, 0.455) # approx. b/w .25 mi and .5 mi @ 38ºN
+    lat_range = (0.2173, 0.575) # approx. b/w .25 mi and .5 mi @ 38ºN
+    return (
+        float(long) + uniform(*long_range),
+        float(lat) + uniform(*lat_range)
+    )
+
+def get_address(addresses):
+    """ Get street address from addresses, or return empty string """
+    if len(addresses) < 1:
+        return ''
+
+    address = addresses[0]
+
+    street = f'{address["line1"] or ""} {address["line1"] or ""}'.strip()
+
+    return ', '.join([
+        street,
+        ' '.join([
+            address['city'],
+            address['state'],
+            address['zip']
+        ])
+    ])
 
 def df_from_trans(transactions):
     """ Transform transaction dict into Pandas DataFrame """
@@ -151,17 +188,8 @@ def df_from_trans(transactions):
             'filing_nid': t['filingNid'],
             'contributor_name': t['allNames'],
             'contributor_type': 'Individual' if t['transaction']['entityCd'] == 'IND' else 'Organization',
-            'contributor_address': ', '.join([ ' '.join([
-                str(t['addresses'][0].get('line1')) or '',
-                str(t['addresses'][0].get('line2')) or '',
-                str(t['addresses'][0].get('city')) or ''
-            ]), ' '.join([
-                str(t['addresses'][0].get('state')) or '',
-                str(t['addresses'][0].get('zip')) or ''
-            ]) ]).strip() if len(t['addresses']) > 0 else '',
-            'contributor_location': (
-                t["addresses"][0]['longitude'], t['addresses'][0]['latitude']
-             ) if len(t['addresses']) > 0 else tuple(),
+            'contributor_address': get_address(t['addresses']),
+            'contributor_location': get_location(t['addresses']),
             'amount': t['calculatedAmount'],
             'expn_code': t['transaction']['tranCode'],
             'expenditure_description': t['transaction']['tranDscr'] or '',
@@ -179,10 +207,10 @@ def df_from_filers(filers):
     # filter out committees without CA SOS IDs
     # as we have no way to join them to filings
     return pd.DataFrame([ {
-        'filer_id': f['filerNid'],
-        'sos_id': f['registrations'].get('CA SOS')
+        'filer_nid': f['filerNid'],
+        'filer_id': f['registrations'].get('CA SOS')
     } for f in filers if f['registrations'].get('CA SOS') is not None
-    ]).astype({ 'sos_id': 'string' })
+    ]).astype({ 'filer_id': 'string' })
 
 def main():
     """ Query Netfile results 1 page at a time
@@ -212,7 +240,7 @@ def main():
 
     # Keep only filings for 2020
     # This is bogus because 2020 election filings may have been received in 2019
-    # Get the filer_id => election_date mapping from Suzanne
+    # Get the ca_sos_id => election_date mapping from Suzanne
     filing_df['receipt_date'] = pd.to_datetime(filing_df['receipt_date'])
     filing_df = filing_df[filing_df['receipt_date'].dt.year > 2018]
 
@@ -225,7 +253,7 @@ def main():
 
     print('===== Get filers =====')
     filers = []
-    for filer_nid in set(filing_df['filer_id']):
+    for filer_nid in set(filing_df['filer_nid']):
         filers += get_filer(filer_nid)
         print('¡', end='', flush=True)
     print('')
@@ -248,9 +276,9 @@ def main():
 
     filer_to_cand_cols = [
         'local_agency_id',
-        'sos_id',
+        'filer_id',
         'election_year',
-        'candidate',
+        'filer_name',
         'filer_name_local',
         'office',
         'start',
@@ -258,16 +286,17 @@ def main():
     ]
     df = pd.read_csv(FILER_TO_CAND_PATH)
     df = df.rename(columns={
-        'SOS ID': 'sos_id',
+        'SOS ID': 'filer_id',
         'Local Agency ID': 'local_agency_id',
         'Filer Name': 'filer_name_local',
-        'contest': 'office'
+        'contest': 'office',
+        'candidate': 'filer_name'
     })[
         filer_to_cand_cols
-    ].astype({ 'sos_id': 'string' })
+    ].astype({ 'filer_id': 'string' })
 
-    df = df.merge(filer_df, how='left', on='sos_id')
-    df = df.merge(filing_df, how='left', on='filer_id').merge(tran_df, on='filing_nid')
+    df = df.merge(filer_df, how='left', on='filer_id')
+    df = df.merge(filing_df, how='left', on='filer_nid').merge(tran_df, on='filing_nid')
     df = df.astype({
         'filer_name': 'string',
         'contributor_name': 'string',
