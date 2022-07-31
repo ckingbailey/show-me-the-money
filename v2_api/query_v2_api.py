@@ -82,7 +82,7 @@ if __name__ == '__main__':
         results_len.append(len(next_trans))
         transactions += next_trans
         query_count += 1
-        if len(next_trans) > 0:
+        if len(next_trans) > 0 and CONTRIBUTION_FORM in [ t['calTransactionType'] for t in next_trans ]:
             tran_filing = i
             break
 
