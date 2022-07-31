@@ -127,7 +127,8 @@ def df_from_filings(filings):
     return pd.DataFrame([{
         'filer_nid': f['filerMeta']['filerId'],
         'filing_nid': f['filingNid'],
-        'receipt_date': f['calculatedDate']
+        'receipt_date': f['calculatedDate'],
+        'committee_name': f['filerMeta']['commonName']
     } for f in filings ])
 
 def get_location(addresses):
@@ -144,10 +145,8 @@ def get_location(addresses):
 
     long_range = (0.2275, 0.455) # approx. b/w .25 mi and .5 mi @ 38ºN
     lat_range = (0.2173, 0.575) # approx. b/w .25 mi and .5 mi @ 38ºN
-    return (
-        float(long) + uniform(*long_range),
-        float(lat) + uniform(*lat_range)
-    )
+    adjusted = [str(float(long) + uniform(*long_range)), str(float(lat) + uniform(*lat_range))]
+    return f'POINT{" ".join(adjusted)}'
 
 def get_address(addresses):
     """ Get street address from addresses, or return empty string """
@@ -156,7 +155,7 @@ def get_address(addresses):
 
     address = addresses[0]
 
-    street = f'{address["line1"] or ""} {address["line1"] or ""}'.strip()
+    street = f'{address["line1"] or ""} {address["line2"] or ""}'.strip()
 
     return ', '.join([
         street,
@@ -170,6 +169,7 @@ def get_address(addresses):
 def df_from_trans(transactions):
     """ Transform transaction dict into Pandas DataFrame """
     tran_cols = [
+        'tran_id',
         'filing_nid',
         'contributor_name',
         'contributor_type',
@@ -179,12 +179,12 @@ def df_from_trans(transactions):
         'expn_code',
         'expenditure_description',
         'form',
-        'jurisdiction',
         'party'
     ]
 
     transaction_data = [
         {
+            'tran_id': t['transaction']['tranId'],
             'filing_nid': t['filingNid'],
             'contributor_name': t['allNames'],
             'contributor_type': 'Individual' if t['transaction']['entityCd'] == 'IND' else 'Organization',
@@ -194,7 +194,6 @@ def df_from_trans(transactions):
             'expn_code': t['transaction']['tranCode'],
             'expenditure_description': t['transaction']['tranDscr'] or '',
             'form': t['calTransactionType'],
-            'jurisdiction': None,
             'party': None,
         }
         for t in transactions
@@ -211,6 +210,14 @@ def df_from_filers(filers):
         'filer_id': f['registrations'].get('CA SOS')
     } for f in filers if f['registrations'].get('CA SOS') is not None
     ]).astype({ 'filer_id': 'string' })
+
+def get_jurisdiction(row):
+    if row['office'].startswith('City Council District '):
+        return 'Council District'
+    if row['office'].startswith('OUSD District'):
+        return 'Oakland Unified School District'
+    
+    return 'Citywide'
 
 def main():
     """ Query Netfile results 1 page at a time
@@ -294,6 +301,8 @@ def main():
     })[
         filer_to_cand_cols
     ].astype({ 'filer_id': 'string' })
+    print('¿ What happened to office col?', df.columns)
+    df['jurisdiction'] = df.apply(get_jurisdiction, axis=1)
 
     df = df.merge(filer_df, how='left', on='filer_id')
     df = df.merge(filing_df, how='left', on='filer_nid').merge(tran_df, on='filing_nid')
@@ -303,6 +312,8 @@ def main():
         'contributor_type': 'string',
         'contributor_address': 'string',
         'amount': float
+    }).rename(columns={
+        'filing_nid': 'filing_id'
     })
     print('===== dtypes after merge =====', len(df.index), df.dtypes, sep='\n')
     pd.set_option('max_colwidth', 12)
@@ -310,14 +321,15 @@ def main():
 
     df.to_csv(f'{EXAMPLE_DATA_DIR}/all_trans.csv', index=False)
 
-    contrib_cols = json.loads(
+    contrib_cols = (list(json.loads(
         Path(SOCRATA_CONTRIBS_SCHEMA_PATH).read_text(encoding='utf8')
-    ).keys()
+    ).keys()) + [ 'committee_name', 'filing_id', 'tran_id' ])
     contrib_df = df[df['form'].isin(CONTRIBUTION_FORMS)][contrib_cols]
     print(contrib_df.head(), len(contrib_df.index), sep='\n')
     contrib_df.to_csv(f'{OUTPUT_DATA_DIR}/contribs_socrata.csv', index=False)
 
-    expend_cols = json.loads(Path(SOCRATA_EXPEND_SCHEMA_PATH).read_text(encoding='utf8'))
+    expend_cols = (json.loads(Path(SOCRATA_EXPEND_SCHEMA_PATH).read_text(encoding='utf8'))
+    + [ 'committee_name', 'filing_id', 'tran_id' ])
     expend_df = df[df['form'] == EXPENDITURE_FORM].rename(columns={
         'contributor_name': 'recipient_name',
         'contributor_address': 'recipient_address',
