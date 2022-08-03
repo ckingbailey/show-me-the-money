@@ -108,14 +108,14 @@ def main():
     contribs_oakdata = pd.concat([schedule_a, schedule_c])
     contribs_oakdata_totals = contribs_oakdata.astype({
         'tran_amt1': float
-    }).round(2).groupby(
+    }).round(0).groupby(
         ['election_year', 'candidate']
     ).agg({
         'tran_amt1': 'sum',
         'tran_id': 'count'
     }).rename(columns={
-        'tran_amt1': 'amount_oakdata',
-        'tran_id': 'ct_oakdata'
+        'tran_amt1': 'amt_oakdata',
+        'tran_id': 'ct_oakd'
     })
     contribs_socrata_totals = contribs_socrata.rename(columns={
         'filer_name': 'candidate'
@@ -125,9 +125,11 @@ def main():
         'amount': 'sum',
         'tran_id': 'count'
     }).rename(columns={
-        'amount': 'amount_netfile',
-        'tran_id': 'ct_netfile'
-    })
+        'amount': 'amt_netfile',
+        'tran_id': 'ct_netf'
+    }).astype({
+        'amt_netfile': float
+    }).round(0)
 
     contribs_excel = pd.read_csv('contribs_excel.csv')
     contribs_excel_totals = contribs_excel.groupby(
@@ -136,8 +138,8 @@ def main():
         'tran_amt1': 'sum',
         'tran_ct': 'sum'
     }).rename(columns={
-        'tran_amt1': 'amount_excel',
-        'tran_ct': 'ct_excel'
+        'tran_amt1': 'amt_excel',
+        'tran_ct': 'ct_excl'
     })
 
     all_contribs = contribs_oakdata_totals.merge(contribs_socrata_totals,
@@ -145,8 +147,18 @@ def main():
         on=['election_year', 'candidate']).merge(contribs_excel_totals,
         how='inner',
         on=['election_year', 'candidate'])
+    all_contribs['eq_n_o'] = all_contribs['amt_netfile'] - all_contribs['amt_oakdata']
+    all_contribs['eq_n_e'] = all_contribs['amt_netfile'] - all_contribs['amt_excel']
+    all_contribs['eq_n_o'] = all_contribs['eq_n_o'].apply(lambda x: '✔︎' if x == 0 else x)
+    all_contribs['eq_n_e'] = all_contribs['eq_n_e'].apply(lambda x: '✔︎' if x == 0 else x)
 
-    print(all_contribs)
+    print(all_contribs[[
+        'amt_netfile', 'ct_netf',
+        'amt_oakdata', 'ct_oakd',
+        'eq_n_o',
+        'amt_excel', 'ct_excl',
+        'eq_n_e'
+    ]])
 
     expends_socrata = pd.read_csv('output/expends_socrata.csv')
     # print(expends_socrata.groupby(['election_year','filer_name'])['amount'].sum())
