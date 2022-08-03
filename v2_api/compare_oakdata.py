@@ -161,33 +161,68 @@ def main():
     ]])
 
     expends_socrata = pd.read_csv('output/expends_socrata.csv')
-    # print(expends_socrata.groupby(['election_year','filer_name'])['amount'].sum())
 
     schedule_e = committees.merge(
         pd.DataFrame(schedule_e).astype({
-            'amount': 'float32'
+            'amount': float
         }).rename(columns={
             'filer_id': 'sos_id',
         }), how='left', on='sos_id'
     ).rename(columns={
         'sos_id': 'filer_id'
     })
-    # print(schedule_e.groupby(
-    #         ['election_year','candidate']
-    #     )[['amount']].sum().merge(expends_socrata.rename(columns={
-    #         'filer_name': 'candidate'
-    #     }).groupby(
-    #         ['election_year','candidate']
-    #     )[['amount']].sum(),
-    #     on=['election_year','candidate'],
-    #     how='inner').rename(columns={
-    #         'amount_x': 'amount_oakdata',
-    #         'amount_y': 'amount_netfile'
-    #     }).astype({
-    #         'amount_oakdata': int,
-    #         'amount_netfile': int
-    #     })
-    # )
+    expends_oakdata_totals = schedule_e.groupby(
+        ['election_year','candidate']
+    ).agg({
+        'amount': 'sum',
+        'tran_id': 'count'
+    }).rename(columns={
+        'amount': 'amt_oakdata',
+        'tran_id': 'ct_oakd'
+    }).round(0)
+
+    expends_netfile_totals = expends_socrata.rename(columns={
+        'filer_name': 'candidate'
+    }).groupby(
+        ['election_year','candidate']
+    ).agg({
+        'amount': 'sum',
+        'tran_id': 'count'
+    }).rename(columns={
+        'amount': 'amt_netfile',
+        'tran_id': 'ct_netf'
+    })
+
+    expends_excel = pd.read_csv('expends_excel.csv')
+    expends_excel_totals = expends_excel.groupby(
+        ['election_year','candidate']
+    ).agg({
+        'tran_amt1': 'sum',
+        'tran_ct': 'sum'
+    }).rename(columns={
+        'tran_amt1': 'amt_excel',
+        'tran_ct': 'ct_excl'
+    })
+
+    all_expends = expends_oakdata_totals.merge(expends_netfile_totals,
+        on=['election_year','candidate'],
+        how='inner').merge(expends_excel_totals,
+        on=['election_year','candidate'],
+        how='inner'
+        ).round(0)
+
+    all_expends['eq_n_o'] = all_expends['amt_netfile'] - all_expends['amt_oakdata']
+    all_expends['eq_n_o'] = all_expends['eq_n_o'].apply(lambda x: '✔︎' if x == 0 else x)
+    all_expends['eq_n_e'] = all_expends['amt_netfile'] - all_expends['amt_excel']
+    all_expends['eq_n_e'] = all_expends['eq_n_e'].apply(lambda x: '✔︎' if x == 0 else x)
+
+    print(all_expends[[
+        'amt_netfile', 'ct_netf',
+        'amt_oakdata', 'ct_oakd',
+        'eq_n_o',
+        'amt_excel', 'ct_excl',
+        'eq_n_e'
+    ]])
 
 if __name__ == '__main__':
     main()
