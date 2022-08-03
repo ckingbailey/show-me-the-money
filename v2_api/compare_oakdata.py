@@ -106,26 +106,47 @@ def main():
         'sos_id': 'filer_id'
     })
     contribs_oakdata = pd.concat([schedule_a, schedule_c])
-    contribs_oakdata_totals = contribs_oakdata.groupby(
+    contribs_oakdata_totals = contribs_oakdata.astype({
+        'tran_amt1': float
+    }).round(2).groupby(
         ['election_year', 'candidate']
-    )[['tran_amt1']].sum()
+    ).agg({
+        'tran_amt1': 'sum',
+        'tran_id': 'count'
+    }).rename(columns={
+        'tran_amt1': 'amount_oakdata',
+        'tran_id': 'ct_oakdata'
+    })
     contribs_socrata_totals = contribs_socrata.rename(columns={
         'filer_name': 'candidate'
     }).groupby(
         ['election_year','candidate']
-    )[['amount']].sum()
+    ).agg({
+        'amount': 'sum',
+        'tran_id': 'count'
+    }).rename(columns={
+        'amount': 'amount_netfile',
+        'tran_id': 'ct_netfile'
+    })
 
     contribs_excel = pd.read_csv('contribs_excel.csv')
     contribs_excel_totals = contribs_excel.groupby(
         ['election_year', 'candidate']
-    )['tran_amt1'].sum()
+    ).agg({
+        'tran_amt1': 'sum',
+        'tran_ct': 'sum'
+    }).rename(columns={
+        'tran_amt1': 'amount_excel',
+        'tran_ct': 'ct_excel'
+    })
 
-    print(contribs_oakdata_totals.merge(contribs_socrata_totals,
+    all_contribs = contribs_oakdata_totals.merge(contribs_socrata_totals,
         how='inner',
         on=['election_year', 'candidate']).merge(contribs_excel_totals,
         how='inner',
         on=['election_year', 'candidate'])
-    )
+
+    print(all_contribs)
 
     expends_socrata = pd.read_csv('output/expends_socrata.csv')
     # print(expends_socrata.groupby(['election_year','filer_name'])['amount'].sum())
@@ -139,22 +160,22 @@ def main():
     ).rename(columns={
         'sos_id': 'filer_id'
     })
-    print(schedule_e.groupby(
-            ['election_year','candidate']
-        )[['amount']].sum().merge(expends_socrata.rename(columns={
-            'filer_name': 'candidate'
-        }).groupby(
-            ['election_year','candidate']
-        )[['amount']].sum(),
-        on=['election_year','candidate'],
-        how='inner').rename(columns={
-            'amount_x': 'amount_oakdata',
-            'amount_y': 'amount_netfile'
-        }).astype({
-            'amount_oakdata': int,
-            'amount_netfile': int
-        })
-    )
+    # print(schedule_e.groupby(
+    #         ['election_year','candidate']
+    #     )[['amount']].sum().merge(expends_socrata.rename(columns={
+    #         'filer_name': 'candidate'
+    #     }).groupby(
+    #         ['election_year','candidate']
+    #     )[['amount']].sum(),
+    #     on=['election_year','candidate'],
+    #     how='inner').rename(columns={
+    #         'amount_x': 'amount_oakdata',
+    #         'amount_y': 'amount_netfile'
+    #     }).astype({
+    #         'amount_oakdata': int,
+    #         'amount_netfile': int
+    #     })
+    # )
 
 if __name__ == '__main__':
     main()
