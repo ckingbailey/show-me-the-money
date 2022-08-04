@@ -64,7 +64,7 @@
         "endpoint": {
             "path": "cal/v101/transaction-elements"
         },
-        "data_path": "calculatedDate"    
+        "data_path": "transaction.tranDate"
     },
     "election_year": {
         "endpoint": "/election/v101/elections",
