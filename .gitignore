@@ -3,7 +3,7 @@ __pycache__
 
 example/
 output/
-oakdata_schedule_*.json
+oakdata_*.json
 
 .env
 .vscode/
