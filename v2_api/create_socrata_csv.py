@@ -127,7 +127,7 @@ def df_from_filings(filings):
     return pd.DataFrame([{
         'filer_nid': f['filerMeta']['filerId'],
         'filing_nid': f['filingNid'],
-        'receipt_date': f['calculatedDate'],
+        'filing_date': f['calculatedDate'],
         'committee_name': f['filerMeta']['commonName']
     } for f in filings ])
 
@@ -146,7 +146,7 @@ def get_location(addresses):
     long_range = (0.2275, 0.455) # approx. b/w .25 mi and .5 mi @ 38ºN
     lat_range = (0.2173, 0.575) # approx. b/w .25 mi and .5 mi @ 38ºN
     adjusted = [str(float(long) + uniform(*long_range)), str(float(lat) + uniform(*lat_range))]
-    return f'POINT{" ".join(adjusted)}'
+    return f'POINT ({" ".join(adjusted)})'
 
 def get_address(addresses):
     """ Get street address from addresses, or return empty string """
@@ -176,6 +176,7 @@ def df_from_trans(transactions):
         'contributor_address',
         'contributor_location',
         'amount',
+        'receipt_date',
         'expn_code',
         'expenditure_description',
         'form',
@@ -189,8 +190,9 @@ def df_from_trans(transactions):
             'contributor_name': t['allNames'],
             'contributor_type': 'Individual' if t['transaction']['entityCd'] == 'IND' else 'Organization',
             'contributor_address': get_address(t['addresses']),
-            'contributor_location': get_location(t['addresses']),
+            'contributor_location': None,
             'amount': t['calculatedAmount'],
+            'receipt_date': t['transaction']['tranDate'],
             'expn_code': t['transaction']['tranCode'],
             'expenditure_description': t['transaction']['tranDscr'] or '',
             'form': t['calTransactionType'],
@@ -199,7 +201,9 @@ def df_from_trans(transactions):
         for t in transactions
     ]
 
-    return pd.DataFrame(transaction_data, columns=tran_cols)
+    df = pd.DataFrame(transaction_data, columns=tran_cols)
+    df['receipt_date'] = pd.to_datetime(df['receipt_date'])
+    return df
 
 def df_from_filers(filers):
     """ Transform filers into Pandas DataFrame """
@@ -248,8 +252,7 @@ def main():
     # Keep only filings for 2020
     # This is bogus because 2020 election filings may have been received in 2019
     # Get the ca_sos_id => election_date mapping from Suzanne
-    filing_df['receipt_date'] = pd.to_datetime(filing_df['receipt_date'])
-    filing_df = filing_df[filing_df['receipt_date'].dt.year > 2018]
+    filing_df['filing_date'] = pd.to_datetime(filing_df['filing_date'])
 
     print('===== Get transactions =====')
     filing_nids = set(filing_df['filing_nid'])
@@ -276,10 +279,10 @@ def main():
     print('===== tran_df dtypes =====', len(tran_df.index), tran_df.dtypes, sep='\n')
 
     Path(f'{EXAMPLE_DATA_DIR}/filings.json').write_text(json.dumps(filings, indent=4), encoding='utf8')
-    Path(f'{EXAMPLE_DATA_DIR}/transactions_2019-present.json').write_text(
+    Path(f'{EXAMPLE_DATA_DIR}/transactions.json').write_text(
         json.dumps(transactions, indent=4), encoding='utf8'
     )
-    Path(f'{EXAMPLE_DATA_DIR}/filers_2019-present.json').write_text(json.dumps(filers, indent=4), encoding='utf8')
+    Path(f'{EXAMPLE_DATA_DIR}/filers.json').write_text(json.dumps(filers, indent=4), encoding='utf8')
 
     filer_to_cand_cols = [
         'local_agency_id',
