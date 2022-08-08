@@ -106,6 +106,7 @@ def main():
         'sos_id': 'filer_id'
     })
     contribs_oakdata = pd.concat([schedule_a, schedule_c])
+    contribs_oakdata['candidate'] = contribs_oakdata['candidate'].apply(lambda c: c.strip())
     contribs_oakdata_totals = contribs_oakdata.astype({
         'tran_amt1': float
     }).round(0).groupby(
@@ -132,6 +133,8 @@ def main():
     }).round(0)
 
     contribs_excel = pd.read_csv('contribs_excel.csv')
+    contribs_excel['candidate'] = contribs_excel['candidate'].apply(lambda c: c.strip())
+
     contribs_excel_totals = contribs_excel.groupby(
         ['election_year', 'candidate']
     ).agg({
