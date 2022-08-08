@@ -17,11 +17,15 @@ Socrata required fields:
 ]
 """
 import json
+import logging
 from pathlib import Path
 from random import uniform
 import pandas as pd
 import requests
 from .query_v2_api import get_filer
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 FILER_TO_CAND_PATH = 'filer_to_candidate.csv'
 SOCRATA_CONTRIBS_SCHEMA_PATH = 'socrata_schema_contrib_fields.json'
@@ -38,6 +42,11 @@ AUTH = tuple(v for k,v in sorted(
     key=lambda r: [ 'api_key', 'api_secret'].index(r[0])
 ))
 TIMEOUT = 7
+SKIP_LIST = [
+    '95096360-1f8d-4502-a70b-451dc6a9a0b3',
+    '8deaa063-883b-4459-a32a-558653ca4fef',
+    '04855230-5387-4cd9-9cfa-3e0c10fe5318'
+]
 
 class TimeoutAdapter(requests.adapters.HTTPAdapter):
     """ Will this allow me to retry on timeout? """
@@ -51,12 +60,13 @@ class TimeoutAdapter(requests.adapters.HTTPAdapter):
 
 session = requests.Session()
 session.hooks['response'] = [ lambda response, *args, **kwargs: response.raise_for_status() ]
-retry_strategy = requests.adapters.Retry(total=5, backoff_factor=1)
+retry_strategy = requests.adapters.Retry(total=5, backoff_factor=2)
 adapter = TimeoutAdapter(max_retries=retry_strategy)
 session.mount('https://', adapter)
 
 def select_response_meta(response_body):
     """ Get props needed from response body for further requests """
+    print(response_body['offset'], response_body['limit'])
     return {
         'page_number': response_body['pageNumber'],
         'has_next_page': response_body['hasNextPage'],
@@ -80,6 +90,21 @@ def get_filings(offset=0) -> tuple[pd.DataFrame, list[dict], dict]:
     body = res.json()
 
     return body['results'], select_response_meta(body)
+
+def get_all_filings() -> list[dict]:
+    filings, response_meta = get_filings()
+    print(response_meta['total'])
+
+    next_offset = response_meta['next_offset']
+    end = ''
+    while next_offset is not None:
+        results, meta = get_filings(offset=next_offset)
+        next_offset = meta['next_offset']
+        filings += results
+        print('¡', end=end, flush=True)
+    print('')
+
+    return filings
 
 def get_transactions(filing_nid, offset=0) -> tuple[pd.DataFrame, list[dict], dict]:
     """ Get a page of transactions
@@ -116,11 +141,32 @@ def get_all_trans_for_filing(filing_nid):
     next_offset = meta.get('next_offset')
     while next_offset is not None:
         results, meta = get_transactions(**params, offset=next_offset)
+        next_offset = meta.get('next_offset')
         prog_char = '¡' if len(results) > 0 else '.'
         transactions += results
-        print(prog_char, end='', flush=True)
+        print(next_offset, end='', flush=True)
 
     return transactions
+
+def get_all_transactions(filing_nids: set) -> list[dict]:
+    """ Get all transactions for set of filing netfile IDs """
+    transactions = []
+    for filing_nid in filing_nids:
+        if filing_nid in SKIP_LIST:
+            continue
+        transactions += get_all_trans_for_filing(filing_nid)
+    print('')
+
+    return transactions
+
+def get_all_filers(filer_nids: set) -> list[dict]:
+    filers = []
+    for filer_nid in filer_nids:
+        filers += get_filer(filer_nid)
+        print('¡', end='', flush=True)
+    print('')
+
+    return filers
 
 def df_from_filings(filings):
     """ Transform filings into Pandas DataFrame """
@@ -131,40 +177,33 @@ def df_from_filings(filings):
         'committee_name': f['filerMeta']['commonName']
     } for f in filings ])
 
-def get_location(addresses):
-    """ Get (long, lat) from addresses, or return empty string """
-    if len(addresses) <= 0:
-        return ''
-
-    address = addresses[0]
-    long = address['longitude']
-    lat = address['latitude']
-
-    if long is None or lat is None:
-        return ''
-
-    long_range = (0.2275, 0.455) # approx. b/w .25 mi and .5 mi @ 38ºN
-    lat_range = (0.2173, 0.575) # approx. b/w .25 mi and .5 mi @ 38ºN
-    adjusted = [str(float(long) + uniform(*long_range)), str(float(lat) + uniform(*lat_range))]
-    return f'POINT ({" ".join(adjusted)})'
-
-def get_address(addresses):
+def get_address(addresses: list[dict]) -> dict[str, str]:
     """ Get street address from addresses, or return empty string """
     if len(addresses) < 1:
-        return ''
+        return {
+            'contributor_address': '',
+            'city': '',
+            'state': '',
+            'zip_code': ''
+        }
 
     address = addresses[0]
 
     street = f'{address["line1"] or ""} {address["line2"] or ""}'.strip()
 
-    return ', '.join([
-        street,
-        ' '.join([
-            address['city'],
-            address['state'],
-            address['zip']
-        ])
-    ])
+    return {
+        'contributor_address': ', '.join([
+            street,
+            ' '.join([
+                address['city'],
+                address['state'],
+                address['zip']
+            ])
+        ]),
+        'city': address['city'],
+        'state': address['state'],
+        'zip_code': address['zip']
+    }
 
 def df_from_trans(transactions):
     """ Transform transaction dict into Pandas DataFrame """
@@ -189,7 +228,7 @@ def df_from_trans(transactions):
             'filing_nid': t['filingNid'],
             'contributor_name': t['allNames'],
             'contributor_type': 'Individual' if t['transaction']['entityCd'] == 'IND' else 'Organization',
-            'contributor_address': get_address(t['addresses']),
+            **get_address(t['addresses']),
             'contributor_location': None,
             'amount': t['calculatedAmount'],
             'receipt_date': t['transaction']['tranDate'],
@@ -216,12 +255,23 @@ def df_from_filers(filers):
     ]).astype({ 'filer_id': 'string' })
 
 def get_jurisdiction(row):
+    """ Get jurisdiction of office, one of
+        - Council District
+        - OUSD District
+        - Citywide
+    """
     if row['office'].startswith('City Council District '):
         return 'Council District'
     if row['office'].startswith('OUSD District'):
         return 'Oakland Unified School District'
     
     return 'Citywide'
+
+def save_source_data(json_data: list[dict]) -> None:
+    for endpoint_name, data in json_data.items():
+        Path(f'{EXAMPLE_DATA_DIR}/{endpoint_name}.json').write_text(
+            json.dumps(data, indent=4
+        ), encoding='utf8')
 
 def main():
     """ Query Netfile results 1 page at a time
@@ -235,38 +285,17 @@ def main():
         4. Query /filer/v101/filers/{filer_nid}, get electionInfluences[electionDate].seat.officeName
     """
     print('===== Get filings =====')
-    filings, response_meta = get_filings()
-    print(response_meta['total'])
-
-    next_offset = response_meta['next_offset']
-    end = ''
-    while next_offset is not None:
-        results, meta = get_filings(offset=next_offset)
-        next_offset = meta['next_offset']
-        filings += results
-        print('¡', end=end, flush=True)
-    print('')
+    filings = get_all_filings()
 
     filing_df = df_from_filings(filings)
-
-    # Keep only filings for 2020
-    # This is bogus because 2020 election filings may have been received in 2019
-    # Get the ca_sos_id => election_date mapping from Suzanne
     filing_df['filing_date'] = pd.to_datetime(filing_df['filing_date'])
 
     print('===== Get transactions =====')
     filing_nids = set(filing_df['filing_nid'])
-    transactions = []
-    for filing_nid in filing_nids:
-        transactions += get_all_trans_for_filing(filing_nid)
-    print('')
+    transactions = get_all_transactions(filing_nids)
 
     print('===== Get filers =====')
-    filers = []
-    for filer_nid in set(filing_df['filer_nid']):
-        filers += get_filer(filer_nid)
-        print('¡', end='', flush=True)
-    print('')
+    filers = get_all_filers(set(filing_df['filer_nid']))
 
     tran_df = df_from_trans(transactions)
     filer_df = df_from_filers(filers)
@@ -278,11 +307,11 @@ def main():
     tran_df = tran_df.merge(expn_codes, how='left', on='expn_code')
     print('===== tran_df dtypes =====', len(tran_df.index), tran_df.dtypes, sep='\n')
 
-    Path(f'{EXAMPLE_DATA_DIR}/filings.json').write_text(json.dumps(filings, indent=4), encoding='utf8')
-    Path(f'{EXAMPLE_DATA_DIR}/transactions.json').write_text(
-        json.dumps(transactions, indent=4), encoding='utf8'
-    )
-    Path(f'{EXAMPLE_DATA_DIR}/filers.json').write_text(json.dumps(filers, indent=4), encoding='utf8')
+    save_source_data({
+        'filings': filings,
+        'transactions': transactions,
+        'filers': filers
+    })
 
     filer_to_cand_cols = [
         'local_agency_id',
@@ -294,8 +323,8 @@ def main():
         'start',
         'end'
     ]
-    df = pd.read_csv(FILER_TO_CAND_PATH)
-    df = df.rename(columns={
+    filer_to_cand = pd.read_csv(FILER_TO_CAND_PATH)
+    filer_to_cand = filer_to_cand.rename(columns={
         'SOS ID': 'filer_id',
         'Local Agency ID': 'local_agency_id',
         'Filer Name': 'filer_name_local',
@@ -303,12 +332,16 @@ def main():
         'candidate': 'filer_name'
     })[
         filer_to_cand_cols
-    ].astype({ 'filer_id': 'string' })
-    print('¿ What happened to office col?', df.columns)
-    df['jurisdiction'] = df.apply(get_jurisdiction, axis=1)
+    ].astype({
+        'filer_id': 'string'
+    })
+    filer_to_cand['jurisdiction'] = filer_to_cand.apply(get_jurisdiction, axis=1)
 
-    df = df.merge(filer_df, how='left', on='filer_id')
-    df = df.merge(filing_df, how='left', on='filer_nid').merge(tran_df, on='filing_nid')
+    df = filer_to_cand.merge(filer_df, how='left', on='filer_id')
+    df = df.merge(
+        filing_df, how='left', on='filer_nid'
+    ).merge(
+        tran_df, on='filing_nid')
     df = df.astype({
         'filer_name': 'string',
         'contributor_name': 'string',
@@ -318,7 +351,8 @@ def main():
     }).rename(columns={
         'filing_nid': 'filing_id'
     })
-    print('===== dtypes after merge =====', len(df.index), df.dtypes, sep='\n')
+    df['filer_name'] = df['filer_name'].apply(lambda n: n.strip())
+
     pd.set_option('max_colwidth', 12)
     print(df.head(12))
 
