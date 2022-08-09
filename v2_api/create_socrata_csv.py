@@ -219,8 +219,8 @@ def get_location(addresses):
 
     # long_range = (0.2275, 0.455) # approx. b/w .25 mi and .5 mi @ 38ºN
     # lat_range = (0.2173, 0.575) # approx. b/w .25 mi and .5 mi @ 38ºN
-    long_range = 0
-    lat_range = 0
+    long_range = 0,0
+    lat_range = 0,0
     adjusted = [str(float(long) + uniform(*long_range)), str(float(lat) + uniform(*lat_range))]
     return f'POINT ({" ".join(adjusted)})'
 
