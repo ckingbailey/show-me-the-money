@@ -205,6 +205,25 @@ def get_address(addresses: list[dict]) -> dict[str, str]:
         'zip_code': address['zip']
     }
 
+def get_location(addresses):
+    """ Get (long, lat) from addresses, or return empty string """
+    if len(addresses) <= 0:
+        return ''
+
+    address = addresses[0]
+    long = address['longitude']
+    lat = address['latitude']
+
+    if long is None or lat is None:
+        return ''
+
+    # long_range = (0.2275, 0.455) # approx. b/w .25 mi and .5 mi @ 38ºN
+    # lat_range = (0.2173, 0.575) # approx. b/w .25 mi and .5 mi @ 38ºN
+    long_range = 0
+    lat_range = 0
+    adjusted = [str(float(long) + uniform(*long_range)), str(float(lat) + uniform(*lat_range))]
+    return f'POINT ({" ".join(adjusted)})'
+
 def df_from_trans(transactions):
     """ Transform transaction dict into Pandas DataFrame """
     tran_cols = [
@@ -213,6 +232,9 @@ def df_from_trans(transactions):
         'contributor_name',
         'contributor_type',
         'contributor_address',
+        'city',
+        'state',
+        'zip_code',
         'contributor_location',
         'amount',
         'receipt_date',
@@ -320,8 +342,8 @@ def main():
         'filer_name',
         'filer_name_local',
         'office',
-        'start',
-        'end'
+        'start_date',
+        'end_date'
     ]
     filer_to_cand = pd.read_csv(FILER_TO_CAND_PATH)
     filer_to_cand = filer_to_cand.rename(columns={
@@ -329,13 +351,17 @@ def main():
         'Local Agency ID': 'local_agency_id',
         'Filer Name': 'filer_name_local',
         'contest': 'office',
-        'candidate': 'filer_name'
+        'candidate': 'filer_name',
+        'start': 'start_date',
+        'end': 'end_date'
     })[
         filer_to_cand_cols
     ].astype({
         'filer_id': 'string'
     })
     filer_to_cand['jurisdiction'] = filer_to_cand.apply(get_jurisdiction, axis=1)
+    filer_to_cand['end_date'] = pd.to_datetime(filer_to_cand['end_date'])
+    filer_to_cand['start_date'] = pd.to_datetime(filer_to_cand['start_date'])
 
     df = filer_to_cand.merge(filer_df, how='left', on='filer_id')
     df = df.merge(
@@ -358,15 +384,20 @@ def main():
 
     df.to_csv(f'{EXAMPLE_DATA_DIR}/all_trans.csv', index=False)
 
+    common_cols = [ 'city', 'state', 'zip_code', 'committee_name', 'filing_id', 'tran_id' ]
     contrib_cols = (list(json.loads(
         Path(SOCRATA_CONTRIBS_SCHEMA_PATH).read_text(encoding='utf8')
-    ).keys()) + [ 'committee_name', 'filing_id', 'tran_id' ])
-    contrib_df = df[df['form'].isin(CONTRIBUTION_FORMS)][contrib_cols]
+    ).keys()) + common_cols)
+    contrib_df = df[df['form'].isin(CONTRIBUTION_FORMS)]
+    contrib_df = contrib_df[
+        (contrib_df['end_date'].isna())
+        | (contrib_df['receipt_date'] < contrib_df['end_date'])
+    ][contrib_cols]
     print(contrib_df.head(), len(contrib_df.index), sep='\n')
     contrib_df.to_csv(f'{OUTPUT_DATA_DIR}/contribs_socrata.csv', index=False)
 
     expend_cols = (json.loads(Path(SOCRATA_EXPEND_SCHEMA_PATH).read_text(encoding='utf8'))
-    + [ 'committee_name', 'filing_id', 'tran_id' ])
+    + common_cols)
     expend_df = df[df['form'] == EXPENDITURE_FORM].rename(columns={
         'contributor_name': 'recipient_name',
         'contributor_address': 'recipient_address',
