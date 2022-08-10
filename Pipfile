@@ -12,6 +12,8 @@ psycopg2 = "*"
 pytest = "*"
 requests-mock = "*"
 sodapy = "*"
+socrata-py = "*"
+autopep8 = "*"
 
 [dev-packages]
 
