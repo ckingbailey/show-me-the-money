@@ -1,3 +1,5 @@
+import json
+from pathlib import Path
 import pandas as pd
 
 def main():
@@ -17,6 +19,7 @@ def main():
 
     missing_trans = unq_reid_trans_pec - unq_reid_trans_nf
 
+    print(reid_id)
     print(missing_trans)
 
     print(reid_pec[
@@ -29,10 +32,40 @@ def main():
 
     all_trans = pd.read_csv('example/all_trans.csv')
     print(all_trans[
-        all_trans['tran_id'].isin(missing_trans)
-    ][['filing_id', 'tran_id', 'amount', 'receipt_date', 'filing_date', 'contributor_name']].sort_values(
+        (all_trans['tran_id'].isin(missing_trans))
+        & (all_trans['filer_name'].str.contains('Reid'))
+    ][['filer_id', 'filer_name', 'filing_id', 'tran_id', 'amount', 'receipt_date', 'filing_date', 'contributor_name']].sort_values(
         by=['filing_date', 'tran_id']
     ))
+
+    filers = json.loads(Path('example/filers.json').read_text(encoding='utf8'))
+    filers = pd.DataFrame([
+        {
+            'filerNid': f['filerNid'],
+            'filer_id': f['registrations'].get('CA SOS'),
+            'filerName': f['filerName'],
+            'candidateName': f['candidateName']
+        } for f in filers
+    ])
+    filers = filers[(filers['filer_id'].notna()) & (filers['filer_id'] != 'Pending')][['filerNid', 'filer_id']]
+    print(len(filers.index))
+    filers = filers[filers['filer_id'] == reid_id]
+
+    trans = json.loads(Path('example/transactions.json').read_text(encoding='utf8'))
+    trans = pd.DataFrame([
+        {
+            'filerNid': t['filerNid'],
+            'tranId': t['transaction']['tranId'],
+            'filingNid': t['filingNid'],
+            'transactionId': t['transactionId'],
+            'tranAmt1': t['transaction']['tranAmt1'],
+            'tranDate': t['transaction']['tranDate'],
+            'calculatedDate': t['calculatedDate'],
+            'tranNamL': t['transaction']['tranNamL'],
+            'isItemized': t['isItemized']
+        } for t in trans
+    ])
+    print(trans[trans['tranId'].isin(missing_trans)])
 
 if __name__ == '__main__':
     main()
