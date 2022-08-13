@@ -59,6 +59,7 @@ def main():
     trans = json.loads(Path('example/transactions.json').read_text(encoding='utf8'))
     trans = pd.DataFrame([
         {
+            'elementNid': t['elementNid'],
             'filer_nid': t['filerNid'],
             'tranId': t['transaction']['tranId'],
             'filingNid': t['filingNid'],
@@ -83,16 +84,59 @@ def main():
             on='filer_nid'
         ), '====================', sep='\n')
 
-    print(
-        'So then who did receive these transactions?',
-        trans[trans['tranId'].isin(missing_trans)].merge(
-            filers[['filer_nid','filer_id','filer_name']],
-            how='inner',
-            on='filer_nid'
-        ).groupby(['filer_name','filer_nid','filer_id']).agg({
-            'tranId': 'count',
-            'tranNamL': 'count'
-        }), '====================', sep='\n')
+    # print(
+    #     'So then who did receive these transactions?',
+    #     trans[trans['tranId'].isin(missing_trans)].merge(
+    #         filers[['filer_nid','filer_id','filer_name']],
+    #         how='inner',
+    #         on='filer_nid'
+    #     ).groupby(['filer_name','filer_nid','filer_id']).agg({
+    #         'tranId': 'count',
+    #         'tranNamL': 'count'
+    #     }), '====================', sep='\n')
+
+    unfiltered_trans = json.loads(
+        Path('example/unfiltered_transactions.json').read_text(encoding='utf8'))
+    print(len(unfiltered_trans))
+    unfiltered_trans = pd.DataFrame([
+        {
+            'elementNid': t['elementNid'],
+            'filer_nid': t['filerNid'],
+            'tranId': t['transaction']['tranId'] if t.get('transaction') is not None else t['transactionId'],
+            'filing_nid': t['filingNid'],
+            'tranAmt1': t['transaction']['tranAmt1'] if t.get('transaction') else None,
+            'tranDate': t['transaction']['tranDate'] if t.get('transaction') else None,
+            'tranNamL': t['transaction']['tranNamL'] if t.get('transaction') else None
+        } for t in unfiltered_trans
+    ])
+
+    rectified_trans = unfiltered_trans.merge(
+        trans.rename(columns={
+            'tranId': 'old_tran_id'
+        }), on=['elementNid'], how='left'
+    )
+    rectified_trans['tranId'] = rectified_trans['tranId'].fillna(rectified_trans['old_tran_id'])
+
+    len_unfiltered_trans = len(unfiltered_trans['elementNid'].unique())
+    len_trans = len(trans['elementNid'].unique())
+    print('Is elementNid the unique identifier of a tran?',
+        f'unfiltered trans {len(unfiltered_trans.index)} {len(unfiltered_trans["elementNid"].unique())}',
+        f'filing trans {len(trans.index)} {len(trans["elementNid"].unique())}',
+        '====================', sep='\n')
+
+    unlinked_tran_nids = set(unfiltered_trans['elementNid']) - set(trans['elementNid'])
+    unlinked_trans = rectified_trans[rectified_trans['elementNid'].isin(unlinked_tran_nids)]
+    print('How many unlinked trans did I fetch?',
+        f'{len(unlinked_trans.index)} from {len_unfiltered_trans} and {len_trans}', sep='\n')
+    print('And how many of those lack tranId?',
+        len(unlinked_trans[unlinked_trans['tranId'].isna()].index),
+        '====================', sep='\n')
+
+    print('Did I find missing tranIds from all trans despite issues fetching them?',
+        rectified_trans[rectified_trans['tranId'].isin(missing_trans)][[
+            'elementNid','filer_nid_x','tranId','tranAmt1_x','tranDate_x','tranNamL_x'
+        ]],
+        '====================', sep='\n')
 
 if __name__ == '__main__':
     main()
