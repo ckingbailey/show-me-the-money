@@ -19,53 +19,80 @@ def main():
 
     missing_trans = unq_reid_trans_pec - unq_reid_trans_nf
 
-    print(reid_id)
-    print(missing_trans)
+    print('> Reid filer id:', reid_id)
+    print('> IDs of missing transactions', missing_trans, end='\n\n')
 
-    print(reid_pec[
+    print('Reid transactions in Suzanne\'s data set', reid_pec[
         reid_pec['tran_id'].isin(missing_trans)
     ][
         ['tran_id_unique', 'tran_id', 'tran_amt1', 'tran_date', 'tran_naml', 'report_num', 'rpt_date']
     ].sort_values(
         by=['tran_date', 'tran_id']
-    ))
+    ), '====================', sep='\n')
 
     all_trans = pd.read_csv('example/all_trans.csv')
-    print(all_trans[
+    print('Same-ID\'d transactions for Reid from all_trans.csv', all_trans[
         (all_trans['tran_id'].isin(missing_trans))
         & (all_trans['filer_name'].str.contains('Reid'))
     ][['filer_id', 'filer_name', 'filing_id', 'tran_id', 'amount', 'receipt_date', 'filing_date', 'contributor_name']].sort_values(
         by=['filing_date', 'tran_id']
-    ))
+    ), '====================', sep='\n')
 
     filers = json.loads(Path('example/filers.json').read_text(encoding='utf8'))
     filers = pd.DataFrame([
         {
-            'filerNid': f['filerNid'],
+            'filer_nid': f['filerNid'],
             'filer_id': f['registrations'].get('CA SOS'),
-            'filerName': f['filerName'],
-            'candidateName': f['candidateName']
+            'filer_name': f['filerName'],
+            'candidate_name': f['candidateName']
         } for f in filers
-    ])
-    filers = filers[(filers['filer_id'].notna()) & (filers['filer_id'] != 'Pending')][['filerNid', 'filer_id']]
-    print(len(filers.index))
-    filers = filers[filers['filer_id'] == reid_id]
+    ]).astype({
+        'filer_id': 'string'
+    })
+    print(
+        'Filers matching Reid',
+        filers[filers['filer_id'] == str(reid_id)],
+        '====================', sep='\n')
+    reid_nid = filers[filers['filer_id'] == str(reid_id)]['filer_nid'].iloc[0]
+    print('> Reid filer_nid', reid_nid, end='\n\n')
 
     trans = json.loads(Path('example/transactions.json').read_text(encoding='utf8'))
     trans = pd.DataFrame([
         {
-            'filerNid': t['filerNid'],
+            'filer_nid': t['filerNid'],
             'tranId': t['transaction']['tranId'],
             'filingNid': t['filingNid'],
-            'transactionId': t['transactionId'],
             'tranAmt1': t['transaction']['tranAmt1'],
             'tranDate': t['transaction']['tranDate'],
-            'calculatedDate': t['calculatedDate'],
             'tranNamL': t['transaction']['tranNamL'],
-            'isItemized': t['isItemized']
         } for t in trans
     ])
-    print(trans[trans['tranId'].isin(missing_trans)])
+    print(
+        'Matching tranIds from raw transactions JSON',
+        trans[trans['tranId'].isin(missing_trans)].merge(
+            filers[['filer_nid','filer_id','filer_name']],
+            how='inner',
+            on='filer_nid'
+        ), '====================', sep='\n')
+
+    print(
+        'Matching tranIds where name is "Reid" from raw transactions JSON',
+        trans[trans['tranId'].isin(missing_trans)].merge(
+            filers[filers['filer_name'].str.contains('Reid')][['filer_nid','filer_id','filer_name']],
+            how='inner',
+            on='filer_nid'
+        ), '====================', sep='\n')
+
+    print(
+        'So then who did receive these transactions?',
+        trans[trans['tranId'].isin(missing_trans)].merge(
+            filers[['filer_nid','filer_id','filer_name']],
+            how='inner',
+            on='filer_nid'
+        ).groupby(['filer_name','filer_nid','filer_id']).agg({
+            'tranId': 'count',
+            'tranNamL': 'count'
+        }), '====================', sep='\n')
 
 if __name__ == '__main__':
     main()
