@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 from pathlib import Path
 import pandas as pd
@@ -84,17 +85,6 @@ def main():
             on='filer_nid'
         ), '====================', sep='\n')
 
-    # print(
-    #     'So then who did receive these transactions?',
-    #     trans[trans['tranId'].isin(missing_trans)].merge(
-    #         filers[['filer_nid','filer_id','filer_name']],
-    #         how='inner',
-    #         on='filer_nid'
-    #     ).groupby(['filer_name','filer_nid','filer_id']).agg({
-    #         'tranId': 'count',
-    #         'tranNamL': 'count'
-    #     }), '====================', sep='\n')
-
     unfiltered_trans = json.loads(
         Path('example/unfiltered_transactions.json').read_text(encoding='utf8'))
     print(len(unfiltered_trans))
@@ -111,32 +101,68 @@ def main():
     ])
 
     rectified_trans = unfiltered_trans.merge(
-        trans.rename(columns={
+        trans.drop(columns=[
+            'tranNamL','tranDate','tranAmt1','filer_nid'
+        ]).rename(columns={
             'tranId': 'old_tran_id'
         }), on=['elementNid'], how='left'
     )
     rectified_trans['tranId'] = rectified_trans['tranId'].fillna(rectified_trans['old_tran_id'])
 
-    len_unfiltered_trans = len(unfiltered_trans['elementNid'].unique())
-    len_trans = len(trans['elementNid'].unique())
-    print('Is elementNid the unique identifier of a tran?',
-        f'unfiltered trans {len(unfiltered_trans.index)} {len(unfiltered_trans["elementNid"].unique())}',
-        f'filing trans {len(trans.index)} {len(trans["elementNid"].unique())}',
-        '====================', sep='\n')
-
-    unlinked_tran_nids = set(unfiltered_trans['elementNid']) - set(trans['elementNid'])
-    unlinked_trans = rectified_trans[rectified_trans['elementNid'].isin(unlinked_tran_nids)]
-    print('How many unlinked trans did I fetch?',
-        f'{len(unlinked_trans.index)} from {len_unfiltered_trans} and {len_trans}', sep='\n')
-    print('And how many of those lack tranId?',
-        len(unlinked_trans[unlinked_trans['tranId'].isna()].index),
-        '====================', sep='\n')
-
     print('Did I find missing tranIds from all trans despite issues fetching them?',
         rectified_trans[rectified_trans['tranId'].isin(missing_trans)][[
-            'elementNid','filer_nid_x','tranId','tranAmt1_x','tranDate_x','tranNamL_x'
+            'elementNid','filer_nid','tranId','tranAmt1','tranDate','tranNamL'
         ]],
         '====================', sep='\n')
+
+    print('All Reid trans from around the time of the missing ones',
+        trans[(trans['filer_nid'] == reid_nid)
+        & (pd.to_datetime(trans['tranDate']) > datetime(2021, 12, 29))
+        & (pd.to_datetime(trans['tranDate']) < datetime(2021, 12, 31))
+        & (trans['tranId'].str.startswith('INC'))].sort_values('tranNamL'),
+        '====================', sep='\n')
+
+    filings = json.loads(Path('example/filings.json').read_text(encoding='utf8'))
+    filings = pd.DataFrame([
+        {
+            'filer_nid': f['filerMeta']['filerId'],
+            'filing_nid': f['filingNid'],
+            'form': f['specificationRef']['name'],
+            'filing_start_date': f['filingMeta']['startDate'],
+            'filing_end_date': f['filingMeta']['endDate']
+        } for f in filings
+    ])
+    reid2022_filings = filings[
+        (filings['filer_nid'] == reid_nid)
+        & (filings['form'].isin(['FPPC460','FPPC497']))]
+    print('Reid Mayor 2022 finance filings', reid2022_filings.drop(
+        columns=['filing_start_date','filer_nid']
+        ).sort_values('filing_end_date'),
+        '====================', sep='\n')
+
+    filing_of_interest = reid2022_filings[reid2022_filings['filing_end_date'] == '2021-12-31']
+    print(f'filing_nid where the missing trans should be found {filing_of_interest["filing_nid"].iloc[0]}')
+
+    trans_for_filing = filing_of_interest.merge(
+        rectified_trans,
+        on='filing_nid',
+        how='left'
+    )
+    # default_display_rows = pd.get_option('display.max_rows')
+    # pd.set_option('display.max_rows', None)
+    print(trans_for_filing[['tranId','tranNamL','tranAmt1','tranDate']].sort_values('tranNamL'))
+
+    # pd.set_option('display.max_rows', default_display_rows)
+
+    trans_for_names = rectified_trans[rectified_trans['tranNamL'].isin([
+        'Tischler','Taplin','Jacobson'])]
+
+    default_display_rows = pd.get_option('display.max_rows')
+    pd.set_option('display.max_rows', None)
+    print(trans_for_names.merge(filers,
+        on='filer_nid',
+        how='inner')[['filer_nid','filer_name','tranId','tranNamL','tranAmt1','tranDate']])
+    pd.set_option('display.max_rows', default_display_rows)
 
 if __name__ == '__main__':
     main()
