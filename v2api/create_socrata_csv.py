@@ -37,8 +37,13 @@ CONTRIBUTION_FORMS = [ 'F460A', 'F460C' ]
 EXPENDITURE_FORM = 'F460E'
 BASE_URL = 'https://netfile.com/api/campaign'
 PARAMS = { 'aid': 'COAK' }
-AUTH = tuple(v for k,v in sorted(
-    [ ln.split('=') for ln in Path('.env').read_text(encoding='utf8').strip().split('\n') ],
+AUTH = tuple(v for _,v in sorted(
+    [
+        ln.split('=')
+        for ln
+        in Path('.env').read_text(encoding='utf8').strip().split('\n')
+        if ln.startswith('api_key=') or ln.startswith('api_secret=')
+    ],
     key=lambda r: [ 'api_key', 'api_secret'].index(r[0])
 ))
 TIMEOUT = 7
@@ -60,7 +65,7 @@ class TimeoutAdapter(requests.adapters.HTTPAdapter):
 
 session = requests.Session()
 session.hooks['response'] = [ lambda response, *args, **kwargs: response.raise_for_status() ]
-retry_strategy = requests.adapters.Retry(total=5, backoff_factor=2)
+retry_strategy = requests.adapters.Retry(total=5, backoff_factor=1)
 adapter = TimeoutAdapter(max_retries=retry_strategy)
 session.mount('https://', adapter)
 
@@ -77,11 +82,14 @@ def select_response_meta(response_body):
         'next_offset': response_body['limit'] + response_body['offset'] if response_body['hasNextPage'] else None
     }
 
-def get_filings(offset=0) -> tuple[pd.DataFrame, list[dict], dict]:
+def get_filings(offset=0, limit=1000) -> tuple[pd.DataFrame, list[dict], dict]:
     """ Get a page of filings
         Return fields required by Socrata
     """
-    params = { **PARAMS }
+    params = {
+        **PARAMS,
+        limit: limit
+    }
 
     if offset > 0:
         params['offset'] = offset
