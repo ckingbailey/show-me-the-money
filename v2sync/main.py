@@ -102,7 +102,7 @@ def sync_all_feeds(session_id):
 def save_data(data: dict[list]):
     """ Save downloaded data to JSON files """
     for k, v in data.items():
-        outpath = (Path(__file__).parent / f'data/{k}.json')
+        outpath = (Path(__file__).parent / f'example/data/{k}.json')
         chars_written = outpath.write_text(
             json.dumps(v, indent=4),
             encoding='utf8')
