@@ -1,6 +1,8 @@
 import argparse
 import json
+import os
 from pathlib import Path
+from pprint import PrettyPrinter
 import requests
 from v2api.create_socrata_csv import (
     session as rsession,
@@ -8,10 +10,8 @@ from v2api.create_socrata_csv import (
     PARAMS,
     AUTH)
 
-SUBSCRIPTION_ID = [
-    ln.split('=')[1] for ln in Path('.env').read_text(encoding='utf8').strip().split('\n')
-    if ln.startswith('subscription_id=')
-][0]
+SUBSCRIPTION_ID = os.environ['SUBSCRIPTION_ID']
+pp = PrettyPrinter()
 
 def get_subscription_options():
     """ See what feeds we can subscribe to
@@ -40,7 +40,8 @@ def create_subscription(sub_name):
     headers = {
         'content-type': 'application/json'
     }
-    print(body)
+    print('Subscribed', flush=True)
+    pp.pprint(body)
 
     res = rsession.post(f'{BASE_URL}{endpoint}',
     params=PARAMS,
@@ -64,7 +65,8 @@ def peek_subscription(sub_id):
     res = rsession.get(endpoint, params=PARAMS, auth=AUTH)
     body = res.json()
 
-    print(body)
+    print('Subscription peek', flush=True)
+    pp.pprint(body)
     return body['dataAvailable']
 
 def start_session(sub_id):
@@ -79,21 +81,25 @@ def start_session(sub_id):
     res = rsession.post(endpoint, params=PARAMS, auth=AUTH, json=req_body)
     body = res.json()
 
-    print(body)
-    return body['session']['id']
-
-def sync_all_feeds(session_id):
-    """ Pull latest data from specified URLs
-    """
-    endpoints = {
-        'filing_activity': f'{BASE_URL}/filing/v101/sync/sessions/{session_id}/filing-activities',
-        'element_activity': f'{BASE_URL}/filing/v101/sync/sessions/{session_id}/element-activities'
+    print('Session started', flush=True)
+    pp.pprint(body)
+    session_id = body['session']['id']
+    return {
+        'session_id': session_id,
+        'endpoints': {
+            t['topicName']: f'{BASE_URL}/filing/v101/sync/sessions/{session_id}/{t["topicName"]}'
+            for t in body['topicLinks']
+        }
     }
 
-    data = { k: '' for k in endpoints.keys() }
-    for k, url in endpoints.items():
+def sync_all_feeds(session):
+    """ Pull latest data from specified URLs
+    """
+    data = {}
+    for k, url in session['endpoints'].items():
         res = rsession.get(url, params=PARAMS, auth=AUTH)
         body = res.json()
+        print(f'Made request to {res.url}. Got response {res}.', flush=True)
 
         data[k] = body['results']
 
@@ -101,12 +107,16 @@ def sync_all_feeds(session_id):
 
 def save_data(data: dict[list]):
     """ Save downloaded data to JSON files """
+    total_chars_written = {}
     for k, v in data.items():
-        outpath = (Path(__file__).parent / f'example/data/{k}.json')
+        outpath = (Path(__file__).parent / f'data/{k}.json')
         chars_written = outpath.write_text(
             json.dumps(v, indent=4),
             encoding='utf8')
-        print(f'Wrote {chars_written} to {outpath.resolve()}')
+        print(f'Wrote {chars_written} to {outpath.resolve()}', flush=True)
+        total_chars_written[k] = chars_written
+
+    return total_chars_written
 
 def close_session(sub_id, session_id):
     """ End NetFile sync session
@@ -119,7 +129,8 @@ def close_session(sub_id, session_id):
     res = rsession.post(url, params=PARAMS, auth=AUTH, json=req_body)
     body = res.json()
 
-    print(body)
+    print('Close session', flush=True)
+    pp.pprint(body)
     return body
 
 def sync_latest_data():
@@ -129,27 +140,34 @@ def sync_latest_data():
         Save latest data to disc
         Close session
     """
+    new_data = {}
     try:
         peek = peek_subscription(SUBSCRIPTION_ID)
-        print(peek)
+        print('Peek:', peek)
         if peek is True:
-            session_id = start_session(SUBSCRIPTION_ID)
+            session = start_session(SUBSCRIPTION_ID)
 
-            new_data = sync_all_feeds(session_id)
-            print({
+            new_data = sync_all_feeds(session)
+            print('Retrieved new data', {
                 k: len(v)
                 for k, v in new_data.items()
             })
-            save_data(new_data)
+            saved = save_data(new_data)
 
     except requests.exceptions.HTTPError as exc:
         req = exc.request
-        print(req.headers)
-        print(req.body)
-        print(req.url)
+        print('Error:', exc.response)
+        print('headers:', req.headers)
+        print('body:', req.body)
+        print('url:', req.url)
         raise
     finally:
-        close_session(SUBSCRIPTION_ID, session_id)
+        close_session(SUBSCRIPTION_ID, session['session_id'])
+
+    return {
+        'downloaded': sum(len(v) for v in new_data.values()),
+        'saved': sum(v for v in saved.values())
+    }
 
 def main():
     """ Depending on input, do one of:
