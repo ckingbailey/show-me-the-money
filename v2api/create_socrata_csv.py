@@ -22,7 +22,7 @@ from pathlib import Path
 from random import uniform
 import pandas as pd
 import requests
-from .query_v2_api import get_filer
+from .query_v2_api import get_filer, AUTH
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -37,10 +37,6 @@ CONTRIBUTION_FORMS = [ 'F460A', 'F460C' ]
 EXPENDITURE_FORM = 'F460E'
 BASE_URL = 'https://netfile.com/api/campaign'
 PARAMS = { 'aid': 'COAK' }
-AUTH = tuple(v for k,v in sorted(
-    [ ln.split('=') for ln in Path('.env').read_text(encoding='utf8').strip().split('\n') ],
-    key=lambda r: [ 'api_key', 'api_secret'].index(r[0])
-))
 TIMEOUT = 7
 SKIP_LIST = [
     '95096360-1f8d-4502-a70b-451dc6a9a0b3',

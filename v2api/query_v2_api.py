@@ -14,7 +14,21 @@ env_vars = {
     for ln
     in  Path('.env').read_text(encoding='utf8').strip().split('\n')
 }
-auth = (env_vars['api_key'], env_vars['api_secret'])
+
+def get_auth_from_env_file(filename: str='.env'):
+    """ Split .env file on newline and look for API_KEY and API_SECRET
+        Return their values as a tuple
+    """
+    auth_keys = [ 'API_KEY', 'API_SECRET' ]
+    auth = tuple( v for _, v in sorted([
+        ln.split('=') for ln in
+        Path(filename).read_text(encoding='utf8').strip().split('\n')
+        if ln.startswith(auth_keys[0]) or ln.startswith(auth_keys[1])
+    ], key=lambda ln: auth_keys.index(ln[0])))
+
+    return auth
+
+AUTH = get_auth_from_env_file()
 
 pp = PrettyPrinter()
 
@@ -27,7 +41,7 @@ def get_filing(offset=0):
     if offset > 0:
         params['offset'] = offset
 
-    res = requests.get(url, params=params, auth=auth)
+    res = requests.get(url, params=params, auth=AUTH)
     body = res.json()
     results = body.pop('results')
 
@@ -42,7 +56,7 @@ def get_transaction(filing):
         'filingNid': filing['filingNid'],
         'parts': 'All',
         **PARAMS
-    }, auth=auth)
+    }, auth=AUTH)
     body = res.json()
 
     return body['results']
@@ -52,7 +66,7 @@ def list_elections():
     """
     url = f'{BASE_URL}/election/v101/elections'
 
-    res = requests.get(url, params=PARAMS, auth=auth)
+    res = requests.get(url, params=PARAMS, auth=AUTH)
     body = res.json()
 
     return body['results']
@@ -62,7 +76,7 @@ def get_filer(filer_nid):
     """
     url = f'{BASE_URL}/filer/v101/filers'
 
-    res = requests.get(url, params={ **PARAMS, 'filerNid': filer_nid }, auth=auth)
+    res = requests.get(url, params={ **PARAMS, 'filerNid': filer_nid }, auth=AUTH)
     body = res.json()
 
     return body['results']
