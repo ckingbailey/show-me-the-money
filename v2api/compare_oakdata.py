@@ -43,6 +43,8 @@ def download_data():
 
     return schedule_a, schedule_c, schedule_e, summary
 
+# def compare_contribs():
+
 def main():
     """ Total all schedule A and schedule C transactions
         for committees specified by filer_to_candidate.csv
@@ -143,6 +145,8 @@ def main():
     }).rename(columns={
         'tran_amt1': 'amt_excel',
         'tran_ct': 'ct_excl'
+    }).astype({
+        'amt_excel': float
     })
 
     all_contribs = contribs_oakdata_totals.merge(contribs_socrata_totals,
