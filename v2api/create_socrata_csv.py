@@ -170,6 +170,7 @@ def df_from_filings(filings):
         'filer_nid': f['filerMeta']['filerId'],
         'filing_nid': f['filingNid'],
         'filing_date': f['calculatedDate'],
+        'form': f['specificationRef']['name'].replace('FPPC', ''),
         'committee_name': f['filerMeta']['commonName']
     } for f in filings ])
 
@@ -220,6 +221,17 @@ def get_location(addresses):
     adjusted = [str(float(long) + uniform(*long_range)), str(float(lat) + uniform(*lat_range))]
     return f'POINT ({" ".join(adjusted)})'
 
+def get_contrib_category(entity_code):
+    """ Translate three-letter entityCd into human readable entity code """
+    return {
+        'RCP': 'Committee',
+        'IND': 'Individual',
+        'OTH': 'Business/Other',
+        'COM': 'Committee',
+        'PTY': 'Political Party',
+        'SCC': 'Small Contributor Committee'
+    }.get(entity_code)
+
 def df_from_trans(transactions):
     """ Transform transaction dict into Pandas DataFrame """
     tran_cols = [
@@ -227,6 +239,7 @@ def df_from_trans(transactions):
         'filing_nid',
         'contributor_name',
         'contributor_type',
+        'contributor_category',
         'contributor_address',
         'city',
         'state',
@@ -246,6 +259,7 @@ def df_from_trans(transactions):
             'filing_nid': t['filingNid'],
             'contributor_name': t['allNames'],
             'contributor_type': 'Individual' if t['transaction']['entityCd'] == 'IND' else 'Organization',
+            'contributor_category': get_contrib_category(t['transaction']['entityCd']),
             **get_address(t['addresses']),
             'contributor_location': None,
             'amount': t['calculatedAmount'],
@@ -286,6 +300,7 @@ def get_jurisdiction(row):
     return 'Citywide'
 
 def save_source_data(json_data: list[dict]) -> None:
+    """ Save JSON data output from NetFile API """
     for endpoint_name, data in json_data.items():
         Path(f'{EXAMPLE_DATA_DIR}/{endpoint_name}.json').write_text(
             json.dumps(data, indent=4
@@ -361,7 +376,7 @@ def main():
 
     df = filer_to_cand.merge(filer_df, how='left', on='filer_id')
     df = df.merge(
-        filing_df, how='left', on='filer_nid'
+        filing_df.drop(columns=['form']), how='left', on='filer_nid'
     ).merge(
         tran_df, on='filing_nid')
     df = df.astype({
