@@ -81,12 +81,6 @@ def main():
         'sos_id': 'string'
     })
 
-    # filer_id_years = committees[['sos_id', 'election_year']].to_dict(orient='records')
-    # a_2020_trans = get_tran_amts(schedule_a, filer_id_years, 2020)
-
-    contribs_socrata = pd.read_csv('output/contribs_socrata.csv')
-    # print(contribs_socrata.groupby(['election_year','filer_name'])['amount'].sum())
-
     schedule_a = committees.merge(
         pd.DataFrame(schedule_a).astype({
             'tran_amt1': 'float32',
@@ -120,6 +114,8 @@ def main():
         'tran_amt1': 'amt_oakdata',
         'tran_id': 'ct_oakd'
     })
+
+    contribs_socrata = pd.read_csv('output/contribs_socrata.csv')
     contribs_socrata_totals = contribs_socrata.rename(columns={
         'filer_name': 'candidate'
     }).groupby(
@@ -211,11 +207,11 @@ def main():
         'tran_ct': 'ct_excl'
     })
 
-    all_expends = expends_oakdata_totals.merge(expends_netfile_totals,
+    all_expends = expends_netfile_totals.merge(expends_oakdata_totals,
         on=['election_year','candidate'],
-        how='inner').merge(expends_excel_totals,
+        how='left').merge(expends_excel_totals,
         on=['election_year','candidate'],
-        how='inner'
+        how='left'
         ).round(0)
 
     all_expends['eq_n_o'] = all_expends['amt_netfile'] - all_expends['amt_oakdata']
@@ -230,6 +226,7 @@ def main():
         'amt_excel', 'ct_excl',
         'eq_n_e'
     ]])
+    all_expends.to_csv('example/expenditure_comparison.csv')
 
 if __name__ == '__main__':
     main()
