@@ -396,9 +396,31 @@ def main():
     df.to_csv(f'{EXAMPLE_DATA_DIR}/all_trans.csv', index=False)
 
     common_cols = [ 'city', 'state', 'zip_code', 'committee_name', 'filing_id', 'tran_id' ]
-    contrib_cols = (list(json.loads(
+    contrib_extra_cols = [ 'contributor_category' ]
+    contrib_socrata_schema = json.loads(
         Path(SOCRATA_CONTRIBS_SCHEMA_PATH).read_text(encoding='utf8')
-    ).keys()) + common_cols)
+    ).keys()
+    contrib_cols = [
+        'tran_id',
+        'filing_id',
+        'filer_id',
+        'filer_name',
+        'committee_name',
+        'contributor_name',
+        'contributor_type',
+        'contributor_category',
+        'contributor_address',
+        'contributor_location',
+        'city',
+        'state',
+        'zip_code',
+        'amount',
+        'receipt_date',
+        'election_year',
+        'office',
+        'jurisdiction',
+        'party'
+    ]
     contrib_df = df[df['form'].isin(CONTRIBUTION_FORMS)]
     contrib_df = contrib_df[
         (contrib_df['end_date'].isna())
