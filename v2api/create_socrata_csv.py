@@ -88,6 +88,7 @@ def get_filings(offset=0) -> tuple[pd.DataFrame, list[dict], dict]:
     return body['results'], select_response_meta(body)
 
 def get_all_filings() -> list[dict]:
+    """ Fetch all filings """
     filings, response_meta = get_filings()
     print(response_meta['total'])
 
@@ -102,10 +103,41 @@ def get_all_filings() -> list[dict]:
 
     return filings
 
-def get_transactions(filing_nid, offset=0) -> tuple[pd.DataFrame, list[dict], dict]:
+def get_trans() -> list[dict]:
+    """ Fetch all transactions """
+    params = {
+        **PARAMS,
+        'parts': 'All',
+        'limit': 1000
+    }
+    offset = 0
+    has_next_page = True
+
+    results = []
+    while has_next_page is True:
+        if offset > 0:
+            params['offset'] = offset
+
+        try:
+            res = session.get(f'{BASE_URL}/cal/v101/transaction-elements', params=params, auth=AUTH)
+        except requests.HTTPError as exc:
+            print(f'{exc.response.status_code} for request {exc.response.url}')
+            params_no_parts = { ** params }
+            params_no_parts.pop('parts')
+            res = session.get(f'{BASE_URL}/cal/v101/transaction-elements', params=params_no_parts, auth=AUTH)
+
+        body = res.json()
+        results = results + body['results']
+
+        has_next_page = body['hasNextPage']
+        offset = offset + body['limit']
+        print('\u258a', end='', flush=True)
+
+    return results
+
+def get_trans_for_filing(filing_nid, offset=0) -> tuple[list[dict], dict]:
     """ Get a page of transactions
         for a filingNid
-        Return fields required by Socrata
     """
     params = {
         **PARAMS,
@@ -128,7 +160,7 @@ def get_all_trans_for_filing(filing_nid):
         'filing_nid': filing_nid
     }
 
-    transactions, meta = get_transactions(**params)
+    transactions, meta = get_trans_for_filing(**params)
     end = '/' if meta['total'] > meta['limit'] else ' '
     if end != ' ':
         print('')
@@ -136,7 +168,7 @@ def get_all_trans_for_filing(filing_nid):
 
     next_offset = meta.get('next_offset')
     while next_offset is not None:
-        results, meta = get_transactions(**params, offset=next_offset)
+        results, meta = get_trans_for_filing(**params, offset=next_offset)
         next_offset = meta.get('next_offset')
         prog_char = '¡' if len(results) > 0 else '.'
         transactions += results
@@ -144,7 +176,7 @@ def get_all_trans_for_filing(filing_nid):
 
     return transactions
 
-def get_all_transactions(filing_nids: set) -> list[dict]:
+def get_trans_for_filings(filing_nids: set) -> list[dict]:
     """ Get all transactions for set of filing netfile IDs """
     transactions = []
     for filing_nid in filing_nids:
@@ -156,6 +188,7 @@ def get_all_transactions(filing_nids: set) -> list[dict]:
     return transactions
 
 def get_all_filers(filer_nids: set) -> list[dict]:
+    """ Fetch all filers """
     filers = []
     for filer_nid in filer_nids:
         filers += get_filer(filer_nid)
@@ -268,8 +301,8 @@ def df_from_trans(transactions):
             'expenditure_description': t['transaction']['tranDscr'] or '',
             'form': t['calTransactionType'],
             'party': None,
-        }
-        for t in transactions
+        } for t in transactions
+        if t.get('transaction') is not None # Skip incomplete transactions
     ]
 
     df = pd.DataFrame(transaction_data, columns=tran_cols)
@@ -325,7 +358,9 @@ def main():
 
     print('===== Get transactions =====')
     filing_nids = set(filing_df['filing_nid'])
-    transactions = get_all_transactions(filing_nids)
+    transactions = get_trans()
+    print('Number of transaction objects with "transaction" props',
+        len([ tran for t in transactions if (tran := t.get('transaction')) is not None ]))
 
     print('===== Get filers =====')
     filers = get_all_filers(set(filing_df['filer_nid']))
