@@ -486,6 +486,7 @@ def main(filings, transactions, filers):
     """
     filing_df = df_from_filings(filings)
     filing_df['filing_date'] = pd.to_datetime(filing_df['filing_date'])
+    print('Unique values for "form" in filings', filing_df['form'].unique())
 
     tran_df = df_from_trans(transactions)
     filer_df = df_from_filers(filers)
