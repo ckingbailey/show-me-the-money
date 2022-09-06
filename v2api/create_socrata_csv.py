@@ -16,6 +16,7 @@ Socrata required fields:
   "party",
 ]
 """
+from datetime import datetime
 import json
 import logging
 from pathlib import Path
@@ -122,6 +123,7 @@ def get_trans() -> list[dict]:
             res = session.get(f'{BASE_URL}/cal/v101/transaction-elements', params=params, auth=AUTH)
         except requests.HTTPError as exc:
             print(f'{exc.response.status_code} for request {exc.response.url}')
+            print(exc.response.json())
             params_no_parts = { ** params }
             params_no_parts.pop('parts')
             res = session.get(f'{BASE_URL}/cal/v101/transaction-elements', params=params_no_parts, auth=AUTH)
@@ -332,6 +334,15 @@ def get_jurisdiction(row):
     
     return 'Citywide'
 
+def get_filing_deadlines():
+    """ Get filing deadlines from csv """
+    date_fields = [ 'election_date', 'report_period_start', 'report_period_end', 'filing_deadline' ]
+    return pd.read_csv('filing_deadlines.csv', parse_dates=date_fields)
+
+def merge_filings_and_trans(filings: pd.DataFrame, trans: pd.DataFrame) -> pd.DataFrame:
+    """ Return filings DataFrame joined with transactions DataFrame, dropping common columns """
+    return filings.drop(columns=['form']).merge(trans, how='left', on='filing_nid')
+
 def save_source_data(json_data: list[dict]) -> None:
     """ Save JSON data output from NetFile API """
     for endpoint_name, data in json_data.items():
@@ -355,6 +366,7 @@ def main():
 
     filing_df = df_from_filings(filings)
     filing_df['filing_date'] = pd.to_datetime(filing_df['filing_date'])
+    print('Unique values for "form" in filings', filing_df['form'].unique())
 
     print('===== Get transactions =====')
     filing_nids = set(filing_df['filing_nid'])
@@ -400,20 +412,17 @@ def main():
         'candidate': 'filer_name',
         'start': 'start_date',
         'end': 'end_date'
-    })[
-        filer_to_cand_cols
-    ].astype({
-        'filer_id': 'string'
-    })
+    })[ filer_to_cand_cols
+    ].astype({ 'filer_id': 'string' })
+
     filer_to_cand['jurisdiction'] = filer_to_cand.apply(get_jurisdiction, axis=1)
     filer_to_cand['end_date'] = pd.to_datetime(filer_to_cand['end_date'])
     filer_to_cand['start_date'] = pd.to_datetime(filer_to_cand['start_date'])
 
     df = filer_to_cand.merge(filer_df, how='left', on='filer_id')
-    df = df.merge(
-        filing_df.drop(columns=['form']), how='left', on='filer_nid'
-    ).merge(
-        tran_df, on='filing_nid')
+    df = df.merge(filing_df, how='left', on='filer_nid')
+    df = merge_filings_and_trans(df, tran_df)
+
     df = df.astype({
         'filer_name': 'string',
         'contributor_name': 'string',
@@ -456,11 +465,21 @@ def main():
         'jurisdiction',
         'party'
     ]
-    contrib_df = df[df['form'].isin(CONTRIBUTION_FORMS)]
-    contrib_df = contrib_df[
-        (contrib_df['end_date'].isna())
-        | (contrib_df['receipt_date'] < contrib_df['end_date'])
+    contribs = df[df['form'].isin(CONTRIBUTION_FORMS)]
+
+    filing_deadlines = get_filing_deadlines()
+    today = datetime(*datetime.now().timetuple()[:3])
+    last_filing_deadline = max(filing_deadlines[filing_deadlines['filing_deadline'] < today]['filing_deadline'])
+
+    late_contribs = df[(df['form'] == '497') & (df['filing_date'] >= last_filing_deadline)]
+    print('What are the unique values of "form"?', df['form'].unique())
+    print(late_contribs.dtypes)
+    print('Late contributions\n', late_contribs)
+    contrib_df = contribs[
+        (contribs['end_date'].isna())
+        | (contribs['receipt_date'] < contribs['end_date'])
     ][contrib_cols]
+    contrib_df = pd.concat([contrib_df, late_contribs])
     print(contrib_df.head(), len(contrib_df.index), sep='\n')
     contrib_df.to_csv(f'{OUTPUT_DATA_DIR}/contribs_socrata.csv', index=False)
 

@@ -32,10 +32,8 @@ def stub_get_trans(monkeypatch):
     trans = json.loads(
         Path(f'{mod.EXAMPLE_DATA_DIR}/transactions_2019-present.json').read_text(encoding='utf8')
     )
-    def get_transactions(filing_nid):
-        return [ t for t in trans if t['filingNid'] == str(filing_nid) ]
 
-    monkeypatch.setattr(mod, 'get_all_trans_for_filing', get_transactions)
+    monkeypatch.setattr(mod, 'get_trans', lambda: trans)
     return trans
 
 def test_main(stub_get_filings, stub_get_filer, stub_get_trans):
