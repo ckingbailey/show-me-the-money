@@ -35,6 +35,7 @@ EXAMPLE_DATA_DIR = 'example'
 OUTPUT_DATA_DIR = 'output'
 
 CONTRIBUTION_FORMS = [ 'F460A', 'F460C' ]
+LATE_CONTRIBUTION_FORM_PATTERN = 'F497'
 EXPENDITURE_FORM = 'F460E'
 BASE_URL = 'https://netfile.com/api/campaign'
 PARAMS = { 'aid': 'COAK' }
@@ -341,7 +342,7 @@ def get_filing_deadlines():
 
 def merge_filings_and_trans(filings: pd.DataFrame, trans: pd.DataFrame) -> pd.DataFrame:
     """ Return filings DataFrame joined with transactions DataFrame, dropping common columns """
-    return filings.drop(columns=['form']).merge(trans, how='left', on='filing_nid')
+    return filings.rename(columns={'form': 'filing_form'}).merge(trans, how='left', on='filing_nid')
 
 def save_source_data(json_data: list[dict]) -> None:
     """ Save JSON data output from NetFile API """
@@ -349,6 +350,14 @@ def save_source_data(json_data: list[dict]) -> None:
         Path(f'{EXAMPLE_DATA_DIR}/{endpoint_name}.json').write_text(
             json.dumps(data, indent=4
         ), encoding='utf8')
+
+def save_previous_version(path_name):
+    """ Move existing file to `prev_${filename}` location """
+    p = Path(path_name).resolve()
+    if p.exists():
+        new_file_name = 'prev_' + p.name
+        new_file_path = p.parent / new_file_name
+        p.rename(new_file_path)
 
 def main():
     """ Query Netfile results 1 page at a time
@@ -366,13 +375,9 @@ def main():
 
     filing_df = df_from_filings(filings)
     filing_df['filing_date'] = pd.to_datetime(filing_df['filing_date'])
-    print('Unique values for "form" in filings', filing_df['form'].unique())
 
     print('===== Get transactions =====')
-    filing_nids = set(filing_df['filing_nid'])
     transactions = get_trans()
-    print('Number of transaction objects with "transaction" props',
-        len([ tran for t in transactions if (tran := t.get('transaction')) is not None ]))
 
     print('===== Get filers =====')
     filers = get_all_filers(set(filing_df['filer_nid']))
@@ -383,9 +388,7 @@ def main():
     expn_codes = pd.read_csv('expenditure_codes.csv').rename(columns={
         'description': 'expenditure_type'
     })
-    print('===== expn_codes dtypes', expn_codes.dtypes, sep='\n')
     tran_df = tran_df.merge(expn_codes, how='left', on='expn_code')
-    print('===== tran_df dtypes =====', len(tran_df.index), tran_df.dtypes, sep='\n')
 
     save_source_data({
         'filings': filings,
@@ -415,15 +418,17 @@ def main():
     })[ filer_to_cand_cols
     ].astype({ 'filer_id': 'string' })
 
-    filer_to_cand['jurisdiction'] = filer_to_cand.apply(get_jurisdiction, axis=1)
     filer_to_cand['end_date'] = pd.to_datetime(filer_to_cand['end_date'])
     filer_to_cand['start_date'] = pd.to_datetime(filer_to_cand['start_date'])
+    filer_to_cand['jurisdiction'] = filer_to_cand.apply(get_jurisdiction, axis=1)
 
-    df = filer_to_cand.merge(filer_df, how='left', on='filer_id')
-    df = df.merge(filing_df, how='left', on='filer_nid')
-    df = merge_filings_and_trans(df, tran_df)
+    filing_id_mapping = filer_to_cand.merge(filer_df, how='left', on='filer_id')
+    filer_filings = filing_id_mapping.merge(filing_df, how='left', on='filer_nid')
+    filing_trans = filer_filings.rename(columns={
+        'form': 'filing_form'
+    }).merge(tran_df, how='left', on='filing_nid')
 
-    df = df.astype({
+    df = filing_trans.astype({
         'filer_name': 'string',
         'contributor_name': 'string',
         'contributor_type': 'string',
@@ -434,16 +439,9 @@ def main():
     })
     df['filer_name'] = df['filer_name'].apply(lambda n: n.strip())
 
-    pd.set_option('max_colwidth', 12)
-    print(df.head(12))
-
     df.to_csv(f'{EXAMPLE_DATA_DIR}/all_trans.csv', index=False)
 
     common_cols = [ 'city', 'state', 'zip_code', 'committee_name', 'filing_id', 'tran_id' ]
-    contrib_extra_cols = [ 'contributor_category' ]
-    contrib_socrata_schema = json.loads(
-        Path(SOCRATA_CONTRIBS_SCHEMA_PATH).read_text(encoding='utf8')
-    ).keys()
     contrib_cols = [
         'tran_id',
         'filing_id',
@@ -466,22 +464,24 @@ def main():
         'party'
     ]
     contribs = df[df['form'].isin(CONTRIBUTION_FORMS)]
+    late_contribs = df[df['filing_form'] == '497']
 
     filing_deadlines = get_filing_deadlines()
     today = datetime(*datetime.now().timetuple()[:3])
     last_filing_deadline = max(filing_deadlines[filing_deadlines['filing_deadline'] < today]['filing_deadline'])
 
-    late_contribs = df[(df['form'] == '497') & (df['filing_date'] >= last_filing_deadline)]
-    print('What are the unique values of "form"?', df['form'].unique())
-    print(late_contribs.dtypes)
-    print('Late contributions\n', late_contribs)
+    latest_late_contribs = late_contribs[late_contribs['filing_date'] >= last_filing_deadline]
+
     contrib_df = contribs[
         (contribs['end_date'].isna())
         | (contribs['receipt_date'] < contribs['end_date'])
     ][contrib_cols]
-    contrib_df = pd.concat([contrib_df, late_contribs])
+    contrib_df = pd.concat([contrib_df, latest_late_contribs])
     print(contrib_df.head(), len(contrib_df.index), sep='\n')
-    contrib_df.to_csv(f'{OUTPUT_DATA_DIR}/contribs_socrata.csv', index=False)
+
+    contribs_file_path = f'{OUTPUT_DATA_DIR}/contribs_socrata.csv'
+    save_previous_version(contribs_file_path)
+    contrib_df.to_csv(contribs_file_path, index=False)
 
     expend_cols = (json.loads(Path(SOCRATA_EXPEND_SCHEMA_PATH).read_text(encoding='utf8'))
     + common_cols)
@@ -492,7 +492,10 @@ def main():
         'receipt_date': 'expenditure_date'
     })[expend_cols]
     print(expend_df.head(), len(expend_df.index), sep='\n')
-    expend_df.to_csv(f'{OUTPUT_DATA_DIR}/expends_socrata.csv', index=False)
+
+    expends_file_path = f'{OUTPUT_DATA_DIR}/expends_socrata.csv'
+    save_previous_version(expends_file_path)
+    expend_df.to_csv(expends_file_path, index=False)
 
 if __name__ == '__main__':
     main()
