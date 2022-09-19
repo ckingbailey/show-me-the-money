@@ -17,6 +17,7 @@ Socrata required fields:
 ]
 """
 from datetime import datetime
+from itertools import zip_longest
 import json
 import logging
 from pathlib import Path
@@ -210,32 +211,50 @@ def df_from_filings(filings):
         'committee_name': f['filerMeta']['commonName']
     } for f in filings ])
 
+def get_relative_location(address: dict) -> str:
+    """ Get location relative to Oakland, CA
+        from address city & state
+    """
+    if address['city'] == 'Oakland':
+        return 'In Oakland'
+    if address['state'] == 'CA':
+        return 'Other CA City'
+    return 'Out of State'
+
 def get_address(addresses: list[dict]) -> dict[str, str]:
     """ Get street address from addresses, or return empty string """
+    keys = [
+        'contributor_address',
+        'city',
+        'state',
+        'zip_code',
+        'contributor_region'
+    ]
+
     if len(addresses) < 1:
-        return {
-            'contributor_address': '',
-            'city': '',
-            'state': '',
-            'zip_code': ''
-        }
+        return { k: v for k, v in zip_longest(keys, '', fillvalue='') }
 
     address = addresses[0]
 
     street = f'{address["line1"] or ""} {address["line2"] or ""}'.strip()
 
     return {
-        'contributor_address': ', '.join([
-            street,
-            ' '.join([
-                address['city'],
-                address['state'],
-                address['zip']
-            ])
-        ]),
-        'city': address['city'],
-        'state': address['state'],
-        'zip_code': address['zip']
+        k: v
+        for k, v
+        in zip(keys, [
+            ', '.join([
+                street,
+                ' '.join([
+                    address['city'],
+                    address['state'],
+                    address['zip']
+                ])
+            ]),
+            address['city'],
+            address['state'],
+            address['zip'],
+            get_relative_location(address)
+        ])
     }
 
 def get_location(addresses):
@@ -280,6 +299,7 @@ def df_from_trans(transactions):
         'city',
         'state',
         'zip_code',
+        'contributor_region',
         'contributor_location',
         'amount',
         'receipt_date',
@@ -453,6 +473,7 @@ def main():
         'contributor_category',
         'contributor_address',
         'contributor_location',
+        'contributor_region',
         'city',
         'state',
         'zip_code',
@@ -475,8 +496,8 @@ def main():
     contrib_df = contribs[
         (contribs['end_date'].isna())
         | (contribs['receipt_date'] < contribs['end_date'])
-    ][contrib_cols]
-    contrib_df = pd.concat([contrib_df, latest_late_contribs])
+    ]
+    contrib_df = pd.concat([contrib_df, latest_late_contribs])[contrib_cols]
     print(contrib_df.head(), len(contrib_df.index), sep='\n')
 
     contribs_file_path = f'{OUTPUT_DATA_DIR}/contribs_socrata.csv'
