@@ -46,6 +46,14 @@ SKIP_LIST = [
     '8deaa063-883b-4459-a32a-558653ca4fef',
     '04855230-5387-4cd9-9cfa-3e0c10fe5318'
 ]
+OAKLAND_MISSPELLINGS = [
+    'OAKLAND',
+    'OakLand',
+    'Oaklalnd',
+    'Oaklannd',
+    'Okaland',
+    'oakland'
+]
 
 class TimeoutAdapter(requests.adapters.HTTPAdapter):
     """ Will this allow me to retry on timeout? """
@@ -211,13 +219,13 @@ def df_from_filings(filings):
         'committee_name': f['filerMeta']['commonName']
     } for f in filings ])
 
-def get_relative_location(address: dict) -> str:
+def get_relative_location(city: str, state: str) -> str:
     """ Get location relative to Oakland, CA
         from address city & state
     """
-    if address['city'] == 'Oakland':
+    if city == 'Oakland':
         return 'In Oakland'
-    if address['state'] == 'CA':
+    if state == 'CA':
         return 'Other CA City'
     return 'Out of State'
 
@@ -237,6 +245,7 @@ def get_address(addresses: list[dict]) -> dict[str, str]:
     address = addresses[0]
 
     street = f'{address["line1"] or ""} {address["line2"] or ""}'.strip()
+    city = 'Oakland' if address['city'] in OAKLAND_MISSPELLINGS else address['city']
 
     return {
         k: v
@@ -245,15 +254,15 @@ def get_address(addresses: list[dict]) -> dict[str, str]:
             ', '.join([
                 street,
                 ' '.join([
-                    address['city'],
+                    city,
                     address['state'],
                     address['zip']
                 ])
             ]),
-            address['city'],
+            city,
             address['state'],
             address['zip'],
-            get_relative_location(address)
+            get_relative_location(city, address['state'])
         ])
     }
 
