@@ -29,11 +29,11 @@ from .query_v2_api import get_filer, AUTH
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-FILER_TO_CAND_PATH = 'filer_to_candidate.csv'
-SOCRATA_CONTRIBS_SCHEMA_PATH = 'socrata_schema_contrib_fields.json'
-SOCRATA_EXPEND_SCHEMA_PATH = 'socrata_schema_expend_fields.json'
 EXAMPLE_DATA_DIR = 'example'
+INPUT_DATA_DIR = 'input'
 OUTPUT_DATA_DIR = 'output'
+FILER_TO_CAND_PATH = f'{INPUT_DATA_DIR}/filer_to_candidate.csv'
+SOCRATA_EXPEND_SCHEMA_PATH = f'{INPUT_DATA_DIR}/socrata_schema_expend_fields.json'
 
 CONTRIBUTION_FORMS = [ 'F460A', 'F460C' ]
 LATE_CONTRIBUTION_FORM_PATTERN = 'F497'
@@ -367,7 +367,7 @@ def get_jurisdiction(row):
 def get_filing_deadlines():
     """ Get filing deadlines from csv """
     date_fields = [ 'election_date', 'report_period_start', 'report_period_end', 'filing_deadline' ]
-    return pd.read_csv('filing_deadlines.csv', parse_dates=date_fields)
+    return pd.read_csv(f'{INPUT_DATA_DIR}/filing_deadlines.csv', parse_dates=date_fields)
 
 def merge_filings_and_trans(filings: pd.DataFrame, trans: pd.DataFrame) -> pd.DataFrame:
     """ Return filings DataFrame joined with transactions DataFrame, dropping common columns """
@@ -414,7 +414,7 @@ def main():
     tran_df = df_from_trans(transactions)
     filer_df = df_from_filers(filers)
 
-    expn_codes = pd.read_csv('expenditure_codes.csv').rename(columns={
+    expn_codes = pd.read_csv(f'{INPUT_DATA_DIR}/expenditure_codes.csv').rename(columns={
         'description': 'expenditure_type'
     })
     tran_df = tran_df.merge(expn_codes, how='left', on='expn_code')
@@ -444,15 +444,16 @@ def main():
         'candidate': 'filer_name',
         'start': 'start_date',
         'end': 'end_date'
-    })[ filer_to_cand_cols
+    })[
+        filer_to_cand_cols
     ].astype({ 'filer_id': 'string' })
 
     filer_to_cand['end_date'] = pd.to_datetime(filer_to_cand['end_date'])
     filer_to_cand['start_date'] = pd.to_datetime(filer_to_cand['start_date'])
     filer_to_cand['jurisdiction'] = filer_to_cand.apply(get_jurisdiction, axis=1)
 
-    filing_id_mapping = filer_to_cand.merge(filer_df, how='left', on='filer_id')
-    filer_filings = filing_id_mapping.merge(filing_df, how='left', on='filer_nid')
+    filer_id_mapping = filer_to_cand.merge(filer_df, how='left', on='filer_id')
+    filer_filings = filer_id_mapping.merge(filing_df, how='left', on='filer_nid')
     filing_trans = filer_filings.rename(columns={
         'form': 'filing_form'
     }).merge(tran_df, how='left', on='filing_nid')
