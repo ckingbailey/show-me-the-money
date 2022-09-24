@@ -1,0 +1,2806 @@
+{
+	"info": {
+		"_postman_id": "6d9a7190-de8e-4b6a-b0bb-2cbb8da57fcb",
+		"name": "campaign-api-share",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "filing",
+			"item": [
+				{
+					"name": "query",
+					"item": [
+						{
+							"name": "Query Filings",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Verify Status code is 200\", function() {\r",
+											"    pm.response.to.have.status(200);\r",
+											"});\r",
+											"\r",
+											"var jsonData = JSON.parse(responseBody);\r",
+											"if (jsonData.results) {\r",
+											"    postman.setEnvironmentVariable(\"filingNid\", jsonData.results[0].filingNid);    \r",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{campaignApiUrl}}/filing/v101/filings?limit=50&aid={{aid}}",
+									"host": [
+										"{{campaignApiUrl}}"
+									],
+									"path": [
+										"filing",
+										"v101",
+										"filings"
+									],
+									"query": [
+										{
+											"key": "limit",
+											"value": "50"
+										},
+										{
+											"key": "aid",
+											"value": "{{aid}}"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Fetch Filing",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Verify Status code is 200\", function() {\r",
+											"    pm.response.to.have.status(200);\r",
+											"});\r",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"url": {
+									"raw": "{{campaignApiUrl}}/filing/v101/filings/{{filingNid}}?aid={{aid}}",
+									"host": [
+										"{{campaignApiUrl}}"
+									],
+									"path": [
+										"filing",
+										"v101",
+										"filings",
+										"{{filingNid}}"
+									],
+									"query": [
+										{
+											"key": "aid",
+											"value": "{{aid}}"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Query Filing Activities",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Verify Status code is 200\", function() {\r",
+											"    pm.response.to.have.status(200);\r",
+											"});\r",
+											"\r",
+											"var jsonData = JSON.parse(responseBody);\r",
+											"if (jsonData.results.length > 0) {\r",
+											"    postman.setEnvironmentVariable(\"filingActivityNid\", jsonData.results[0].filingActivityNid);    \r",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{campaignApiUrl}}/filing/v101/filing-activities?limit=50&aid={{aid}}",
+									"host": [
+										"{{campaignApiUrl}}"
+									],
+									"path": [
+										"filing",
+										"v101",
+										"filing-activities"
+									],
+									"query": [
+										{
+											"key": "limit",
+											"value": "50"
+										},
+										{
+											"key": "aid",
+											"value": "{{aid}}"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Query Efiled CAL Filing Activities",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Verify Status code is 200\", function() {\r",
+											"    pm.response.to.have.status(200);\r",
+											"});\r",
+											"\r",
+											"var jsonData = JSON.parse(responseBody);\r",
+											"if (jsonData.results.length > 0) {\r",
+											"    postman.setEnvironmentVariable(\"filingActivityNid\", jsonData.results[0].filingActivityNid);    \r",
+											"    postman.setEnvironmentVariable(\"filingNid\", jsonData.results[0].filingNid);    \r",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{campaignApiUrl}}/filing/v101/filing-activities?limit=50&aid={{aid}}&mechanismType=Electronic&specificationOrg=CAL",
+									"host": [
+										"{{campaignApiUrl}}"
+									],
+									"path": [
+										"filing",
+										"v101",
+										"filing-activities"
+									],
+									"query": [
+										{
+											"key": "limit",
+											"value": "50"
+										},
+										{
+											"key": "aid",
+											"value": "{{aid}}"
+										},
+										{
+											"key": "mechanismType",
+											"value": "Electronic"
+										},
+										{
+											"key": "specificationOrg",
+											"value": "CAL"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Fetch Filing Activity",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Verify Status code is 200\", function() {\r",
+											"    pm.response.to.have.status(200);\r",
+											"});\r",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"url": {
+									"raw": "{{campaignApiUrl}}/filing/v101/filing-activities/{{filingActivityNid}}?aid={{aid}}",
+									"host": [
+										"{{campaignApiUrl}}"
+									],
+									"path": [
+										"filing",
+										"v101",
+										"filing-activities",
+										"{{filingActivityNid}}"
+									],
+									"query": [
+										{
+											"key": "aid",
+											"value": "{{aid}}"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Query Filing Elements",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Verify Status code is 200\", function() {\r",
+											"    pm.response.to.have.status(200);\r",
+											"});\r",
+											"\r",
+											"var jsonData = JSON.parse(responseBody);\r",
+											"if (jsonData.results.length > 0) {\r",
+											"    postman.setEnvironmentVariable(\"elementNid\", jsonData.results[0].elementNid);    \r",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{campaignApiUrl}}/filing/v101/filing-elements?limit=50&aid={{aid}}&offset=0",
+									"host": [
+										"{{campaignApiUrl}}"
+									],
+									"path": [
+										"filing",
+										"v101",
+										"filing-elements"
+									],
+									"query": [
+										{
+											"key": "limit",
+											"value": "50"
+										},
+										{
+											"key": "aid",
+											"value": "{{aid}}"
+										},
+										{
+											"key": "offset",
+											"value": "0"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Fetch Filing Element",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Verify Status code is 200\", function() {\r",
+											"    pm.response.to.have.status(200);\r",
+											"});\r",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"url": {
+									"raw": "{{campaignApiUrl}}/filing/v101/filing-elements/{{elementNid}}?aid={{aid}}",
+									"host": [
+										"{{campaignApiUrl}}"
+									],
+									"path": [
+										"filing",
+										"v101",
+										"filing-elements",
+										"{{elementNid}}"
+									],
+									"query": [
+										{
+											"key": "aid",
+											"value": "{{aid}}"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Query Filing Attachments",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Verify Status code is 200\", function() {\r",
+											"    pm.response.to.have.status(200);\r",
+											"});\r",
+											"\r",
+											"var jsonData = JSON.parse(responseBody);\r",
+											"if (jsonData.results.length > 0) {\r",
+											"    postman.setEnvironmentVariable(\"attachmentContentItemNid\", jsonData.results[0].contentItemNid);    \r",
+											"}\r",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{campaignApiUrl}}/filing/v101/filing-attachments?limit=50&aid={{aid}}",
+									"host": [
+										"{{campaignApiUrl}}"
+									],
+									"path": [
+										"filing",
+										"v101",
+										"filing-attachments"
+									],
+									"query": [
+										{
+											"key": "limit",
+											"value": "50"
+										},
+										{
+											"key": "aid",
+											"value": "{{aid}}"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Fetch Filing Attachment",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Verify Status code is 200\", function() {\r",
+											"    pm.response.to.have.status(200);\r",
+											"});\r",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"url": {
+									"raw": "{{campaignApiUrl}}/filing/v101/filing-attachments/{{attachmentContentItemNid}}?aid={{aid}}",
+									"host": [
+										"{{campaignApiUrl}}"
+									],
+									"path": [
+										"filing",
+										"v101",
+										"filing-attachments",
+										"{{attachmentContentItemNid}}"
+									],
+									"query": [
+										{
+											"key": "aid",
+											"value": "{{aid}}"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Query Element Activities",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Verify Status code is 200\", function() {\r",
+											"    pm.response.to.have.status(200);\r",
+											"});\r",
+											"\r",
+											"var jsonData = JSON.parse(responseBody);\r",
+											"if (jsonData.results.length > 0) {\r",
+											"    postman.setEnvironmentVariable(\"elementActivityNid\", jsonData.results[0].elementActivityNid);    \r",
+											"}\r",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{campaignApiUrl}}/filing/v101/element-activities?limit=50&aid={{aid}}",
+									"host": [
+										"{{campaignApiUrl}}"
+									],
+									"path": [
+										"filing",
+										"v101",
+										"element-activities"
+									],
+									"query": [
+										{
+											"key": "limit",
+											"value": "50"
+										},
+										{
+											"key": "aid",
+											"value": "{{aid}}"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Fetch Element Activity",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Verify Status code is 200\", function() {\r",
+											"    pm.response.to.have.status(200);\r",
+											"});\r",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"url": {
+									"raw": "{{campaignApiUrl}}/filing/v101/element-activities/{{elementActivityNid}}?aid={{aid}}",
+									"host": [
+										"{{campaignApiUrl}}"
+									],
+									"path": [
+										"filing",
+										"v101",
+										"element-activities",
+										"{{elementActivityNid}}"
+									],
+									"query": [
+										{
+											"key": "aid",
+											"value": "{{aid}}"
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "sync",
+					"item": [
+						{
+							"name": "Fetch Filing Feed",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Verify Status code is 200\", function() {\r",
+											"    pm.response.to.have.status(200);\r",
+											"});\r",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{campaignApiUrl}}/sync/v101/feeds/filing_v101?aid={{aid}}",
+									"host": [
+										"{{campaignApiUrl}}"
+									],
+									"path": [
+										"sync",
+										"v101",
+										"feeds",
+										"filing_v101"
+									],
+									"query": [
+										{
+											"key": "aid",
+											"value": "{{aid}}"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Create Filing Subscription",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Verify Status code is 200\", function() {\r",
+											"    pm.response.to.have.status(200);\r",
+											"});\r",
+											"\r",
+											"var jsonData = JSON.parse(responseBody);\r",
+											"postman.setEnvironmentVariable(\"filingSubscriptionId\", jsonData.id);\r",
+											"postman.setEnvironmentVariable(\"subscriptionOwner\", jsonData.owner);"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n\t\"name\":\"MyFilingSubscription\",\n    \"filter\": {\n        \"aid\": \"{{aid}}\",\n        \"topics\": [\"filing-activities\", \"element-activities\"]\n    }\n}"
+								},
+								"url": {
+									"raw": "{{campaignApiUrl}}/filing/v101/sync/subscribe?aid={{aid}}",
+									"host": [
+										"{{campaignApiUrl}}"
+									],
+									"path": [
+										"filing",
+										"v101",
+										"sync",
+										"subscribe"
+									],
+									"query": [
+										{
+											"key": "aid",
+											"value": "{{aid}}"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Peek Subscription",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Verify Status code is 200\", function() {\r",
+											"    pm.response.to.have.status(200);\r",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": ""
+								},
+								"url": {
+									"raw": "{{campaignApiUrl}}/sync/v101/subscriptions/{{filingSubscriptionId}}/peek?aid={{aid}}",
+									"host": [
+										"{{campaignApiUrl}}"
+									],
+									"path": [
+										"sync",
+										"v101",
+										"subscriptions",
+										"{{filingSubscriptionId}}",
+										"peek"
+									],
+									"query": [
+										{
+											"key": "aid",
+											"value": "{{aid}}"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Create Session",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Verify Status code is 200\", function() {\r",
+											"    pm.response.to.have.status(200);\r",
+											"});\r",
+											"\r",
+											"var jsonData = JSON.parse(responseBody);\r",
+											"if (jsonData.session) {\r",
+											"    postman.setEnvironmentVariable(\"filingSyncSessionId\", jsonData.session.id);    \r",
+											"}\r",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n\t\"subscriptionId\":\"{{filingSubscriptionId}}\",\n    \"sequenceRangeBegin\": 3000 // provided to offset into the dataset so our samples have element activity (early filings are all paper)\n}"
+								},
+								"url": {
+									"raw": "{{campaignApiUrl}}/sync/v101/sessions?aid={{aid}}",
+									"host": [
+										"{{campaignApiUrl}}"
+									],
+									"path": [
+										"sync",
+										"v101",
+										"sessions"
+									],
+									"query": [
+										{
+											"key": "aid",
+											"value": "{{aid}}"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Sync Filing Activites",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Verify Status code is 200\", function() {\r",
+											"    pm.response.to.have.status(200);\r",
+											"});\r",
+											"\r",
+											"var jsonData = JSON.parse(responseBody);\r",
+											"if (!jsonData.empty) {\r",
+											"    var fa = jsonData.results[0];\r",
+											"    postman.setEnvironmentVariable(\"filingActivityNid\", fa.filingActivityNid);    \r",
+											"    postman.setEnvironmentVariable(\"filingNid\", fa.filingNid);    \r",
+											"    postman.setEnvironmentVariable(\"filerId\", fa.filingSnapshot.filerMeta.filerId);  \r",
+											"}\r",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"url": {
+									"raw": "{{campaignApiUrl}}/filing/v101/sync/sessions/{{filingSyncSessionId}}/filing-activities?aid={{aid}}&limit=10",
+									"host": [
+										"{{campaignApiUrl}}"
+									],
+									"path": [
+										"filing",
+										"v101",
+										"sync",
+										"sessions",
+										"{{filingSyncSessionId}}",
+										"filing-activities"
+									],
+									"query": [
+										{
+											"key": "aid",
+											"value": "{{aid}}"
+										},
+										{
+											"key": "limit",
+											"value": "10"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Sync Element Activites",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Verify Status code is 200\", function() {\r",
+											"    pm.response.to.have.status(200);\r",
+											"});\r",
+											"\r",
+											"var jsonData = JSON.parse(responseBody);\r",
+											"if (!jsonData.empty) {\r",
+											"    var fe = jsonData.results[0];\r",
+											"    postman.setEnvironmentVariable(\"elementActivityNid\", fe.elementActivityNid);\r",
+											"    postman.setEnvironmentVariable(\"elementNid\", fe.element.elementNid); \r",
+											"}\r",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"url": {
+									"raw": "{{campaignApiUrl}}/filing/v101/sync/sessions/{{filingSyncSessionId}}/element-activities?aid={{aid}}&limit=100",
+									"host": [
+										"{{campaignApiUrl}}"
+									],
+									"path": [
+										"filing",
+										"v101",
+										"sync",
+										"sessions",
+										"{{filingSyncSessionId}}",
+										"element-activities"
+									],
+									"query": [
+										{
+											"key": "aid",
+											"value": "{{aid}}"
+										},
+										{
+											"key": "limit",
+											"value": "100"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Complete Session",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Verify Status code is 200\", function() {\r",
+											"    pm.response.to.have.status(200);\r",
+											"});\r",
+											"\r",
+											"var jsonData = JSON.parse(responseBody);\r",
+											"postman.setEnvironmentVariable(\"calSessionId\", jsonData.session.id);"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n\t\"subscriptionId\":\"{{filingGlobalSubscriptionId}}\"\n}"
+								},
+								"url": {
+									"raw": "{{campaignApiUrl}}/sync/v101/sessions/{{filingSyncSessionId}}/commands/complete?aid={{aid}}",
+									"host": [
+										"{{campaignApiUrl}}"
+									],
+									"path": [
+										"sync",
+										"v101",
+										"sessions",
+										"{{filingSyncSessionId}}",
+										"commands",
+										"complete"
+									],
+									"query": [
+										{
+											"key": "aid",
+											"value": "{{aid}}"
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "cal query",
+			"item": [
+				{
+					"name": "Query Transaction Elements",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Verify Status code is 200\", function() {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									"\r",
+									"var jsonData = JSON.parse(responseBody);\r",
+									"if (jsonData.results.length > 0) {\r",
+									"    postman.setEnvironmentVariable(\"elementNid\", jsonData.results[0].elementNid);    \r",
+									"}\r",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{campaignApiUrl}}/cal/v101/transaction-elements?limit=50&aid={{aid}}",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"cal",
+								"v101",
+								"transaction-elements"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "50"
+								},
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Fetch Transaction Element",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Verify Status code is 200\", function() {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{campaignApiUrl}}/cal/v101/transaction-elements/{{elementNid}}?aid={{aid}}",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"cal",
+								"v101",
+								"transaction-elements",
+								"{{elementNid}}"
+							],
+							"query": [
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Query Transaction Elements For Filing All Parts",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Verify Status code is 200\", function() {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{campaignApiUrl}}/cal/v101/transaction-elements?limit=50&aid={{aid}}&parts=All&filingNid={{filingNid}}",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"cal",
+								"v101",
+								"transaction-elements"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "50"
+								},
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								},
+								{
+									"key": "parts",
+									"value": "All"
+								},
+								{
+									"key": "filingNid",
+									"value": "{{filingNid}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Query Transaction Elements for Filing",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Verify Status code is 200\", function() {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									"\r",
+									"var jsonData = JSON.parse(responseBody);\r",
+									"if (jsonData.results.length > 0) {\r",
+									"    postman.setEnvironmentVariable(\"elementActivityNid\", jsonData.results[0].elementActivityNid);    \r",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{campaignApiUrl}}/cal/v101/transaction-elements?limit=50&aid={{aid}}&filingNid={{filingNid}}",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"cal",
+								"v101",
+								"transaction-elements"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "50"
+								},
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								},
+								{
+									"key": "filingNid",
+									"value": "{{filingNid}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Query Transaction Elements for Filing Activity",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Verify Status code is 200\", function() {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									"\r",
+									"var jsonData = JSON.parse(responseBody);\r",
+									"if (jsonData.results.length > 0) {\r",
+									"    postman.setEnvironmentVariable(\"elementActivityNid\", jsonData.results[0].elementActivityNid);    \r",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{campaignApiUrl}}/cal/v101/transaction-elements?limit=50&aid={{aid}}&filingActivityNid={{filingActivityNid}}",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"cal",
+								"v101",
+								"transaction-elements"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "50"
+								},
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								},
+								{
+									"key": "filingActivityNid",
+									"value": "{{filingActivityNid}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Query Summaries",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Verify Status code is 200\", function() {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									"\r",
+									"var jsonData = JSON.parse(responseBody);\r",
+									"if (jsonData.results.length > 0) {\r",
+									"    postman.setEnvironmentVariable(\"elementNid\", jsonData.results[0].elementNid);    \r",
+									"}\r",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{campaignApiUrl}}/cal/v101/summaries?limit=50&aid={{aid}}",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"cal",
+								"v101",
+								"summaries"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "50"
+								},
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "election",
+			"item": [
+				{
+					"name": "Query Elections (setup)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);\r",
+									"if(jsonData.results.length > 0) {\r",
+									"    let filer = jsonData.results[0];\r",
+									"    postman.setEnvironmentVariable(\"electionNid\", filer.electionNid);\r",
+									"    postman.setEnvironmentVariable(\"electionCaption\", filer.electionCaption);\r",
+									"    postman.setEnvironmentVariable(\"electionCodes\", filer.electionCodes);\r",
+									"    postman.setEnvironmentVariable(\"isPublic\", filer.isPublic);\r",
+									"    postman.setEnvironmentVariable(\"aid\", filer.aid);\r",
+									"    \r",
+									"    let dateString = filer.electionDate;\r",
+									"    let dateTokens = dateString.split('-');\r",
+									"    let formattedDate = `${dateTokens[1]}/${dateTokens[2]}/${dateTokens[0]}`;\r",
+									"    postman.setEnvironmentVariable(\"electionDate\", formattedDate);\r",
+									"    \r",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{campaignApiUrl}}/election/v101/elections?aid={{aid}}&limit=5",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"election",
+								"v101",
+								"elections"
+							],
+							"query": [
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								},
+								{
+									"key": "limit",
+									"value": "5"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Fetch Election",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Verify Status code is 200\", function() {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{campaignApiUrl}}/election/v101/elections/{{electionNid}}?aid={{aid}}",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"election",
+								"v101",
+								"elections",
+								"{{electionNid}}"
+							],
+							"query": [
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Query Election by NID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);\r",
+									"if(jsonData.results.length > 0) {\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", jsonData.results[0].filerNid);\r",
+									"    postman.setEnvironmentVariable(\"aid\", jsonData.results[0].aid);\r",
+									"    postman.setEnvironmentVariable(\"filingName\", jsonData.results[0].filerName);\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", jsonData.results[0].filerNid);\r",
+									"\r",
+									"     \r",
+									"    \r",
+									"    var legalFilingDate = new Date(jsonData.results[0].toLegalFilingDate);\r",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{campaignApiUrl}}/election/v101/elections?aid={{aid}}&electionNid={{electionNid}}",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"election",
+								"v101",
+								"elections"
+							],
+							"query": [
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								},
+								{
+									"key": "electionNid",
+									"value": "{{electionNid}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Query Elections by Election Date",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);\r",
+									"if(jsonData.results.length > 0) {\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", jsonData.results[0].filerNid);\r",
+									"    postman.setEnvironmentVariable(\"aid\", jsonData.results[0].aid);\r",
+									"    postman.setEnvironmentVariable(\"filingName\", jsonData.results[0].filerName);\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", jsonData.results[0].filerNid);\r",
+									"\r",
+									"     \r",
+									"    \r",
+									"    var legalFilingDate = new Date(jsonData.results[0].toLegalFilingDate);\r",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{campaignApiUrl}}/election/v101/elections?aid={{aid}}&electionDate={{electionDate}}&limit=5",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"election",
+								"v101",
+								"elections"
+							],
+							"query": [
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								},
+								{
+									"key": "electionDate",
+									"value": "{{electionDate}}"
+								},
+								{
+									"key": "limit",
+									"value": "5"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Query Elections by Election Caption",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);\r",
+									"if(jsonData.results.length > 0) {\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", jsonData.results[0].filerNid);\r",
+									"    postman.setEnvironmentVariable(\"aid\", jsonData.results[0].aid);\r",
+									"    postman.setEnvironmentVariable(\"filingName\", jsonData.results[0].filerName);\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", jsonData.results[0].filerNid);\r",
+									"\r",
+									"     \r",
+									"    \r",
+									"    var legalFilingDate = new Date(jsonData.results[0].toLegalFilingDate);\r",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{campaignApiUrl}}/election/v101/elections?aid={{aid}}&electionCaption={{electionCaption}}&limit=5",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"election",
+								"v101",
+								"elections"
+							],
+							"query": [
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								},
+								{
+									"key": "electionCaption",
+									"value": "{{electionCaption}}"
+								},
+								{
+									"key": "limit",
+									"value": "5"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Query Elections by Election Codes",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);\r",
+									"if(jsonData.results.length > 0) {\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", jsonData.results[0].filerNid);\r",
+									"    postman.setEnvironmentVariable(\"aid\", jsonData.results[0].aid);\r",
+									"    postman.setEnvironmentVariable(\"filingName\", jsonData.results[0].filerName);\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", jsonData.results[0].filerNid);\r",
+									"\r",
+									"     \r",
+									"    \r",
+									"    var legalFilingDate = new Date(jsonData.results[0].toLegalFilingDate);\r",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{campaignApiUrl}}/election/v101/elections?aid={{aid}}&electionCodes={{electionCodes}}&limit=5",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"election",
+								"v101",
+								"elections"
+							],
+							"query": [
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								},
+								{
+									"key": "electionCodes",
+									"value": "{{electionCodes}}"
+								},
+								{
+									"key": "limit",
+									"value": "5"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Query Elections by Election Public/Non-Public",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);\r",
+									"if(jsonData.results.length > 0) {\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", jsonData.results[0].filerNid);\r",
+									"    postman.setEnvironmentVariable(\"aid\", jsonData.results[0].aid);\r",
+									"    postman.setEnvironmentVariable(\"filingName\", jsonData.results[0].filerName);\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", jsonData.results[0].filerNid);\r",
+									"\r",
+									"     \r",
+									"    \r",
+									"    var legalFilingDate = new Date(jsonData.results[0].toLegalFilingDate);\r",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{campaignApiUrl}}/election/v101/elections?aid={{aid}}&isPublic={{isPublic}}&limit=5",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"election",
+								"v101",
+								"elections"
+							],
+							"query": [
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								},
+								{
+									"key": "isPublic",
+									"value": "{{isPublic}}"
+								},
+								{
+									"key": "limit",
+									"value": "5"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "filer",
+			"item": [
+				{
+					"name": "Query Filers (setup)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);\r",
+									"if(jsonData.results.length > 0) {\r",
+									"    let filer = jsonData.results[0];\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", filer.filerNid);\r",
+									"    postman.setEnvironmentVariable(\"filerName\", filer.filerName);\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", filer.filerNid);\r",
+									"    postman.setEnvironmentVariable(\"candidateName\", filer.candidateName);\r",
+									"    if(filer.committeeTypes.length > 0) {\r",
+									"        postman.setEnvironmentVariable(\"committeeType\", filer.committeeTypes[0]);\r",
+									"    }\r",
+									"    \r",
+									"    let registrationKey = Object.keys(filer.registrations)[0];\r",
+									"    postman.setEnvironmentVariable(\"registrationKey\", registrationKey);\r",
+									"    postman.setEnvironmentVariable(\"registrationValue\", filer.registrations[registrationKey]);\r",
+									"    \r",
+									"    if(filer.officers.length > 0) {\r",
+									"        postman.setEnvironmentVariable(\"officerName\", filer.officers[0].officerName);\r",
+									"        postman.setEnvironmentVariable(\"officerPosition\", filer.officers[0].position);\r",
+									"    }\r",
+									"    if(filer.electionInfluences.length > 0) {\r",
+									"        postman.setEnvironmentVariable(\"electionNid\", filer.electionInfluences[0].electionNid);\r",
+									"        postman.setEnvironmentVariable(\"electionSeatNid\", filer.electionInfluences[0].seatNid);\r",
+									"        postman.setEnvironmentVariable(\"electionMeasureNid\", filer.electionInfluences[0].measureNid);\r",
+									"        postman.setEnvironmentVariable(\"candidateNid\", filer.electionInfluences[0].candidateNid);\r",
+									"        \r",
+									"        let dateString = filer.electionInfluences[0].electionDate;\r",
+									"        let dateTokens = dateString.split('-');\r",
+									"        let formattedDate = `${dateTokens[1]}/${dateTokens[2]}/${dateTokens[0]}`;\r",
+									"        postman.setEnvironmentVariable(\"electionDate\", formattedDate);\r",
+									"    }\r",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{campaignApiUrl}}/filer/v101/filers?aid={{aid}}&limit=5",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"filer",
+								"v101",
+								"filers"
+							],
+							"query": [
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								},
+								{
+									"key": "limit",
+									"value": "5"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Fetch Filer",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);\r",
+									"let filer = jsonData;\r",
+									"postman.setEnvironmentVariable(\"filerNid\", filer.filerNid);\r",
+									"postman.setEnvironmentVariable(\"aid\", filer.aid);\r",
+									"postman.setEnvironmentVariable(\"filerName\", filer.filerName);\r",
+									"postman.setEnvironmentVariable(\"filerNid\", filer.filerNid);\r",
+									"postman.setEnvironmentVariable(\"candidateName\", filer.candidateName);\r",
+									"\r",
+									"if(filer.committeeTypes.length > 0) {\r",
+									"    postman.setEnvironmentVariable(\"committeeType\", filer.committeeTypes[0]);\r",
+									"}\r",
+									"\r",
+									"let registrationKey = Object.keys(filer.registrations)[0];\r",
+									"postman.setEnvironmentVariable(\"registrationKey\", registrationKey);\r",
+									"postman.setEnvironmentVariable(\"registrationValue\", filer.registrations[registrationKey]);\r",
+									"\r",
+									"if(filer.officers.length > 0) {\r",
+									"    postman.setEnvironmentVariable(\"officerName\", filer.officers[0].officerName);\r",
+									"    postman.setEnvironmentVariable(\"officerPosition\", filer.officers[0].position);\r",
+									"}\r",
+									"if(filer.electionInfluences.length > 0) {\r",
+									"    postman.setEnvironmentVariable(\"electionNid\", filer.electionInfluences[0].electionNid);\r",
+									"    postman.setEnvironmentVariable(\"electionSeatNid\", filer.electionInfluences[0].seatNid);\r",
+									"    postman.setEnvironmentVariable(\"electionMeasureNid\", '179298921');\r",
+									"    \r",
+									"    let dateString = filer.electionInfluences[0].electionDate;\r",
+									"    let dateTokens = dateString.split('-');\r",
+									"    let formattedDate = `${dateTokens[1]}/${dateTokens[2]}/${dateTokens[0]}`;\r",
+									"    postman.setEnvironmentVariable(\"electionDate\", formattedDate);\r",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{campaignApiUrl}}/filer/v101/filers/{{filerNid}}?aid={{aid}}",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"filer",
+								"v101",
+								"filers",
+								"{{filerNid}}"
+							],
+							"query": [
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Query Filers by Filer Name",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);\r",
+									"if(jsonData.results.length > 0) {\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", jsonData.results[0].filerNid);\r",
+									"    postman.setEnvironmentVariable(\"aid\", jsonData.results[0].aid);\r",
+									"    postman.setEnvironmentVariable(\"filingName\", jsonData.results[0].filerName);\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", jsonData.results[0].filerNid);\r",
+									"\r",
+									"     \r",
+									"    \r",
+									"    var legalFilingDate = new Date(jsonData.results[0].toLegalFilingDate);\r",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{campaignApiUrl}}/filer/v101/filers?aid={{aid}}&filerName={{filerName}}",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"filer",
+								"v101",
+								"filers"
+							],
+							"query": [
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								},
+								{
+									"key": "filerName",
+									"value": "{{filerName}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Query Filers by Filer NID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{campaignApiUrl}}/filer/v101/filers?aid={{aid}}&filerNid={{filerNid}}",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"filer",
+								"v101",
+								"filers"
+							],
+							"query": [
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								},
+								{
+									"key": "filerNid",
+									"value": "{{filerNid}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Query Filers by Candidate Name",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);\r",
+									"if(jsonData.results.length > 0) {\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", jsonData.results[0].filerNid);\r",
+									"    postman.setEnvironmentVariable(\"aid\", jsonData.results[0].aid);\r",
+									"    postman.setEnvironmentVariable(\"filingName\", jsonData.results[0].filerName);\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", jsonData.results[0].filerNid);\r",
+									"\r",
+									"     \r",
+									"    \r",
+									"    var legalFilingDate = new Date(jsonData.results[0].toLegalFilingDate);\r",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{campaignApiUrl}}/filer/v101/filers?aid={{aid}}&candidateName={{candidateName}}&limit=5",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"filer",
+								"v101",
+								"filers"
+							],
+							"query": [
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								},
+								{
+									"key": "candidateName",
+									"value": "{{candidateName}}"
+								},
+								{
+									"key": "limit",
+									"value": "5"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Query Filers by Officer Name",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);\r",
+									"if(jsonData.results.length > 0) {\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", jsonData.results[0].filerNid);\r",
+									"    postman.setEnvironmentVariable(\"aid\", jsonData.results[0].aid);\r",
+									"    postman.setEnvironmentVariable(\"filingName\", jsonData.results[0].filerName);\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", jsonData.results[0].filerNid);\r",
+									"\r",
+									"     \r",
+									"    \r",
+									"    var legalFilingDate = new Date(jsonData.results[0].toLegalFilingDate);\r",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{campaignApiUrl}}/filer/v101/filers?aid={{aid}}&officerName={{officerName}}&limit=5",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"filer",
+								"v101",
+								"filers"
+							],
+							"query": [
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								},
+								{
+									"key": "officerName",
+									"value": "{{officerName}}"
+								},
+								{
+									"key": "limit",
+									"value": "5"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Query Filers by Officer Position",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);\r",
+									"if(jsonData.results.length > 0) {\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", jsonData.results[0].filerNid);\r",
+									"    postman.setEnvironmentVariable(\"aid\", jsonData.results[0].aid);\r",
+									"    postman.setEnvironmentVariable(\"filingName\", jsonData.results[0].filerName);\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", jsonData.results[0].filerNid);\r",
+									"\r",
+									"     \r",
+									"    \r",
+									"    var legalFilingDate = new Date(jsonData.results[0].toLegalFilingDate);\r",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{campaignApiUrl}}/filer/v101/filers?aid={{aid}}&officerPosition={{officerPosition}}&limit=5",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"filer",
+								"v101",
+								"filers"
+							],
+							"query": [
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								},
+								{
+									"key": "officerPosition",
+									"value": "{{officerPosition}}"
+								},
+								{
+									"key": "limit",
+									"value": "5"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Query Filers by Election Date",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);\r",
+									"if(jsonData.results.length > 0) {\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", jsonData.results[0].filerNid);\r",
+									"    postman.setEnvironmentVariable(\"aid\", jsonData.results[0].aid);\r",
+									"    postman.setEnvironmentVariable(\"filingName\", jsonData.results[0].filerName);\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", jsonData.results[0].filerNid);\r",
+									"\r",
+									"     \r",
+									"    \r",
+									"    var legalFilingDate = new Date(jsonData.results[0].toLegalFilingDate);\r",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{campaignApiUrl}}/filer/v101/filers?aid={{aid}}&electionDate={{electionDate}}&limit=5",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"filer",
+								"v101",
+								"filers"
+							],
+							"query": [
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								},
+								{
+									"key": "electionDate",
+									"value": "{{electionDate}}"
+								},
+								{
+									"key": "limit",
+									"value": "5"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Query Filers by Committee Type",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);\r",
+									"if(jsonData.results.length > 0) {\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", jsonData.results[0].filerNid);\r",
+									"    postman.setEnvironmentVariable(\"aid\", jsonData.results[0].aid);\r",
+									"    postman.setEnvironmentVariable(\"filingName\", jsonData.results[0].filerName);\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", jsonData.results[0].filerNid);\r",
+									"\r",
+									"     \r",
+									"    \r",
+									"    var legalFilingDate = new Date(jsonData.results[0].toLegalFilingDate);\r",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{campaignApiUrl}}/filer/v101/filers?aid={{aid}}&committeeType={{committeeType}}&limit=5",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"filer",
+								"v101",
+								"filers"
+							],
+							"query": [
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								},
+								{
+									"key": "committeeType",
+									"value": "{{committeeType}}"
+								},
+								{
+									"key": "limit",
+									"value": "5"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Query Filers by Registration Key",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);\r",
+									"if(jsonData.results.length > 0) {\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", jsonData.results[0].filerNid);\r",
+									"    postman.setEnvironmentVariable(\"aid\", jsonData.results[0].aid);\r",
+									"    postman.setEnvironmentVariable(\"filingName\", jsonData.results[0].filerName);\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", jsonData.results[0].filerNid);\r",
+									"\r",
+									"     \r",
+									"    \r",
+									"    var legalFilingDate = new Date(jsonData.results[0].toLegalFilingDate);\r",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{campaignApiUrl}}/filer/v101/filers?aid={{aid}}&registrationKey={{registrationKey}}&limit=5",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"filer",
+								"v101",
+								"filers"
+							],
+							"query": [
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								},
+								{
+									"key": "registrationKey",
+									"value": "{{registrationKey}}"
+								},
+								{
+									"key": "limit",
+									"value": "5"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Query Filers by Registration Value",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);\r",
+									"if(jsonData.results.length > 0) {\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", jsonData.results[0].filerNid);\r",
+									"    postman.setEnvironmentVariable(\"aid\", jsonData.results[0].aid);\r",
+									"    postman.setEnvironmentVariable(\"filingName\", jsonData.results[0].filerName);\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", jsonData.results[0].filerNid);\r",
+									"\r",
+									"     \r",
+									"    \r",
+									"    var legalFilingDate = new Date(jsonData.results[0].toLegalFilingDate);\r",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{campaignApiUrl}}/filer/v101/filers?aid={{aid}}&registrationValue={{registrationValue}}&limit=5",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"filer",
+								"v101",
+								"filers"
+							],
+							"query": [
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								},
+								{
+									"key": "registrationValue",
+									"value": "{{registrationValue}}"
+								},
+								{
+									"key": "limit",
+									"value": "5"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Query Filers by ElectionNid",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);\r",
+									"if(jsonData.results.length > 0) {\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", jsonData.results[0].filerNid);\r",
+									"    postman.setEnvironmentVariable(\"aid\", jsonData.results[0].aid);\r",
+									"    postman.setEnvironmentVariable(\"filingName\", jsonData.results[0].filerName);\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", jsonData.results[0].filerNid);\r",
+									"\r",
+									"     \r",
+									"    \r",
+									"    var legalFilingDate = new Date(jsonData.results[0].toLegalFilingDate);\r",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{campaignApiUrl}}/filer/v101/filers?aid={{aid}}&electionNid={{electionNid}}&limit=5",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"filer",
+								"v101",
+								"filers"
+							],
+							"query": [
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								},
+								{
+									"key": "electionNid",
+									"value": "{{electionNid}}"
+								},
+								{
+									"key": "limit",
+									"value": "5"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Query Filers by SeatNid",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);\r",
+									"if(jsonData.results.length > 0) {\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", jsonData.results[0].filerNid);\r",
+									"    postman.setEnvironmentVariable(\"aid\", jsonData.results[0].aid);\r",
+									"    postman.setEnvironmentVariable(\"filingName\", jsonData.results[0].filerName);\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", jsonData.results[0].filerNid);\r",
+									"\r",
+									"     \r",
+									"    \r",
+									"    var legalFilingDate = new Date(jsonData.results[0].toLegalFilingDate);\r",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{campaignApiUrl}}/filer/v101/filers?aid={{aid}}&electionSeatNid={{electionSeatNid}}&limit=5",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"filer",
+								"v101",
+								"filers"
+							],
+							"query": [
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								},
+								{
+									"key": "electionSeatNid",
+									"value": "{{electionSeatNid}}"
+								},
+								{
+									"key": "limit",
+									"value": "5"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Query Filers by MeasureNid",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);\r",
+									"if(jsonData.results.length > 0) {\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", jsonData.results[0].filerNid);\r",
+									"    postman.setEnvironmentVariable(\"aid\", jsonData.results[0].aid);\r",
+									"    postman.setEnvironmentVariable(\"filingName\", jsonData.results[0].filerName);\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", jsonData.results[0].filerNid);\r",
+									"\r",
+									"     \r",
+									"    \r",
+									"    var legalFilingDate = new Date(jsonData.results[0].toLegalFilingDate);\r",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{campaignApiUrl}}/filer/v101/filers?aid={{aid}}&electionMeasureNid={{electionMeasureNid}}&limit=5",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"filer",
+								"v101",
+								"filers"
+							],
+							"query": [
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								},
+								{
+									"key": "electionMeasureNid",
+									"value": "{{electionMeasureNid}}"
+								},
+								{
+									"key": "limit",
+									"value": "5"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Query Filers by CandidateNid",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);\r",
+									"if(jsonData.results.length > 0) {\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", jsonData.results[0].filerNid);\r",
+									"    postman.setEnvironmentVariable(\"aid\", jsonData.results[0].aid);\r",
+									"    postman.setEnvironmentVariable(\"filingName\", jsonData.results[0].filerName);\r",
+									"    postman.setEnvironmentVariable(\"filerNid\", jsonData.results[0].filerNid);\r",
+									"\r",
+									"     \r",
+									"    \r",
+									"    var legalFilingDate = new Date(jsonData.results[0].toLegalFilingDate);\r",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{campaignApiUrl}}/filer/v101/filers?aid={{aid}}&candidateNid={{candidateNid}}&limit=5",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"filer",
+								"v101",
+								"filers"
+							],
+							"query": [
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								},
+								{
+									"key": "candidateNid",
+									"value": "{{candidateNid}}"
+								},
+								{
+									"key": "limit",
+									"value": "5"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "sync",
+			"item": [
+				{
+					"name": "List Sync Feeds",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Verify Status code is 200\", function() {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{campaignApiUrl}}/sync/v101/feeds?aid={{aid}}",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"sync",
+								"v101",
+								"feeds"
+							],
+							"query": [
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Fetch Sync Subscription",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Verify Status code is 200\", function() {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{campaignApiUrl}}/sync/v101/subscriptions/{{filingSubscriptionId}}?aid={{aid}}",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"sync",
+								"v101",
+								"subscriptions",
+								"{{filingSubscriptionId}}"
+							],
+							"query": [
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Query Sync Subscriptions",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Verify Status code is 200\", function() {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{campaignApiUrl}}/sync/v101/subscriptions?aid={{aid}}&owner={{subscriptionOwner}}",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"sync",
+								"v101",
+								"subscriptions"
+							],
+							"query": [
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								},
+								{
+									"key": "owner",
+									"value": "{{subscriptionOwner}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Fetch Sync Session",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Verify Status code is 200\", function() {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{campaignApiUrl}}/sync/v101/sessions/{{filingSyncSessionId}}?aid={{aid}}",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"sync",
+								"v101",
+								"sessions",
+								"{{filingSyncSessionId}}"
+							],
+							"query": [
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Query Sync Sessions",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Verify Status code is 200\", function() {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{campaignApiUrl}}/sync/v101/sessions?aid={{aid}}&subscriptionId={{filingSubscriptionId}}",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"sync",
+								"v101",
+								"sessions"
+							],
+							"query": [
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								},
+								{
+									"key": "subscriptionId",
+									"value": "{{filingSubscriptionId}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel Session",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Verify Status code is 200\", function() {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "{{campaignApiUrl}}/cal/v101/sync/sessions/{{calSessionId}}/commands/cancel?aid={{aid}}",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"cal",
+								"v101",
+								"sync",
+								"sessions",
+								"{{calSessionId}}",
+								"commands",
+								"cancel"
+							],
+							"query": [
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel Sync Subscription",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Verify Status code is 200\", function() {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"feedName\":\"cal_v101\",\n\t\"name\":\"MyCalSubscription\"\n}"
+						},
+						"url": {
+							"raw": "{{campaignApiUrl}}/cal/v101/sync/subscriptions/{{calSubscriptionId}}/commands/cancel?aid={{aid}}",
+							"host": [
+								"{{campaignApiUrl}}"
+							],
+							"path": [
+								"cal",
+								"v101",
+								"sync",
+								"subscriptions",
+								"{{calSubscriptionId}}",
+								"commands",
+								"cancel"
+							],
+							"query": [
+								{
+									"key": "aid",
+									"value": "{{aid}}"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "System Info",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{campaignApiUrl}}/system",
+					"host": [
+						"{{campaignApiUrl}}"
+					],
+					"path": [
+						"system"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"auth": {
+		"type": "basic",
+		"basic": [
+			{
+				"key": "password",
+				"value": "{{apiSecret}}",
+				"type": "string"
+			},
+			{
+				"key": "username",
+				"value": "{{apiKey}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}
