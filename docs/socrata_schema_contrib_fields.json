@@ -1,0 +1,86 @@
+{
+    "filer_id": {
+        "endpoint": {
+            "path": "filing/v101/filings"
+        },
+        "data_path": "filerMeta.filerId"
+    },
+    "filer_name": {
+        "endpoint": {
+            "path": "filing/v101/filings"
+        },
+        "data_path": "filerMeta.commonName"
+    },
+    "contributor_name": {
+        "endpoint": {
+            "path": "cal/v101/transaction-elements"
+        },
+        "data_path": "allNames"
+    },
+    "contributor_type": {
+        "endpoint": {
+            "path": "cal/v101/transaction-elements",
+            "query": {
+                "parts": "All"
+            },
+            "data_path": [
+                "transaction.entityCd"
+            ]
+        }
+    },
+    "contributor_address": {
+        "endpoint": {
+            "path": "cal/v101/transaction-elements",
+            "query": {
+                "parts": "All"
+            },
+            "data_path": [
+                "addresses[].line1",
+                "addresses[].line2",
+                "addresses[].state",
+                "addresses[].zip"
+            ]
+        }
+    },
+    "contributor_location": {
+        "endpoint": {
+            "path": "cal/v101/transaction-elements",
+            "query": {
+                "parts": "All"
+            },
+            "data_path": [
+                "addresses[].latitude",
+                "addresses[].longitude"
+            ]
+        }
+    },
+    "amount": {
+        "endpoint": {
+            "path": "cal/v101/transaction-elements"
+        },
+        "data_path": "calculatedAmount"
+    },
+    "receipt_date": {
+        "endpoint": {
+            "path": "cal/v101/transaction-elements"
+        },
+        "data_path": "transaction.tranDate"
+    },
+    "election_year": {
+        "endpoint": "/election/v101/elections",
+        "data_path": [
+            "How to match filing date with election date?",
+            "electionDate"
+        ]
+    },
+    "office": {
+        "endpoint": {
+            "path": "/filer/v101/filers/{filer_nid}"
+        },
+        "data_path": "electionInfluences[?How to match filingDate with electionDate?].seat.officeName"
+    },
+    "jurisdiction": {
+        "constant?": "Oakland?"
+    },
+    "party": null
+}

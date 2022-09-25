@@ -1,0 +1,302 @@
+{
+    "filing": [
+        {
+            "request": {
+                "path": "filing/v101/filings",
+                "params": [
+                    "limit",
+                    "aid"
+                ]
+            },
+            "response": {
+                
+            }
+        },
+        {
+            "path": "filing/v101/filings/{{filingNid}}",
+            "params": [
+                "aid"
+            ]
+        },
+        {
+            "path": "filing/v101/filing-activities",
+            "params": [
+                "limit",
+                "aid"
+            ]
+        },
+        {
+            "path": "filing/v101/filing-activities",
+            "params": [
+                "limit",
+                "aid",
+                "mechanismType",
+                "specificationOrg"
+            ]
+        },
+        {
+            "path": "filing/v101/filing-activities/{{filingActivityNid}}",
+            "params": [
+                "aid"
+            ]
+        },
+        {
+            "path": "filing/v101/filing-elements",
+            "params": [
+                "limit",
+                "aid",
+                "offset"
+            ]
+        },
+        {
+            "path": "filing/v101/filing-elements/{{elementNid}}",
+            "params": [
+                "aid"
+            ]
+        },
+        {
+            "path": "filing/v101/filing-attachments",
+            "params": [
+                "limit",
+                "aid"
+            ]
+        },
+        {
+            "path": "filing/v101/filing-attachments/{{attachmentContentItemNid}}",
+            "params": [
+                "aid"
+            ]
+        },
+        {
+            "path": "filing/v101/element-activities",
+            "params": [
+                "limit",
+                "aid"
+            ]
+        },
+        {
+            "path": "filing/v101/element-activities/{{elementActivityNid}}",
+            "params": [
+                "aid"
+            ]
+        }
+    ],
+    "transaction": [
+        {
+            "path": "cal/v101/transaction-elements",
+            "params": [
+                "limit",
+                "aid"
+            ]
+        },
+        {
+            "path": "cal/v101/transaction-elements/{{elementNid}}",
+            "params": [
+                "aid"
+            ]
+        },
+        {
+            "path": "cal/v101/transaction-elements",
+            "params": [
+                "limit",
+                "aid",
+                "parts",
+                "filingNid"
+            ]
+        },
+        {
+            "path": "cal/v101/transaction-elements",
+            "params": [
+                "limit",
+                "aid",
+                "filingNid"
+            ]
+        },
+        {
+            "path": "cal/v101/transaction-elements",
+            "params": [
+                "limit",
+                "aid",
+                "filingActivityNid"
+            ]
+        },
+        {
+            "path": "cal/v101/summaries",
+            "params": [
+                "limit",
+                "aid"
+            ]
+        }
+    ],
+    "election": [
+        {
+            "path": "election/v101/elections",
+            "params": [
+                "aid",
+                "limit"
+            ]
+        },
+        {
+            "path": "election/v101/elections/{{electionNid}}",
+            "params": [
+                "aid"
+            ]
+        },
+        {
+            "path": "election/v101/elections",
+            "params": [
+                "aid",
+                "electionNid"
+            ]
+        },
+        {
+            "path": "election/v101/elections",
+            "params": [
+                "aid",
+                "electionDate",
+                "limit"
+            ]
+        },
+        {
+            "path": "election/v101/elections",
+            "params": [
+                "aid",
+                "electionCaption",
+                "limit"
+            ]
+        },
+        {
+            "path": "election/v101/elections",
+            "params": [
+                "aid",
+                "electionCodes",
+                "limit"
+            ]
+        },
+        {
+            "path": "election/v101/elections",
+            "params": [
+                "aid",
+                "isPublic",
+                "limit"
+            ]
+        }
+    ],
+    "filer": [
+        {
+            "path": "filer/v101/filers",
+            "query": [
+                "aid",
+                "limit"
+            ]
+        },
+        {
+            "path": "filer/v101/filers/{{filerNid}}",
+            "query": [
+                "aid"
+            ]
+        },
+        {
+            "path": "filer/v101/filers",
+            "query": [
+                "aid",
+                "filerName"
+            ]
+        },
+        {
+            "path": "filer/v101/filers",
+            "query": [
+                "aid",
+                "filerNid"
+            ]
+        },
+        {
+            "path": "filer/v101/filers",
+            "query": [
+                "aid",
+                "candidateName",
+                "limit"
+            ]
+        },
+        {
+            "path": "filer/v101/filers",
+            "query": [
+                "aid",
+                "officerName",
+                "limit"
+            ]
+        },
+        {
+            "path": "filer/v101/filers",
+            "query": [
+                "aid",
+                "officerPosition",
+                "limit"
+            ]
+        },
+        {
+            "path": "filer/v101/filers",
+            "query": [
+                "aid",
+                "electionDate",
+                "limit"
+            ]
+        },
+        {
+            "path": "filer/v101/filers",
+            "query": [
+                "aid",
+                "committeeType",
+                "limit"
+            ]
+        },
+        {
+            "path": "filer/v101/filers",
+            "query": [
+                "aid",
+                "registrationKey",
+                "limit"
+            ]
+        },
+        {
+            "path": "filer/v101/filers",
+            "query": [
+                "aid",
+                "registrationValue",
+                "limit"
+            ]
+        },
+        {
+            "path": "filer/v101/filers",
+            "query": [
+                "aid",
+                "electionNid",
+                "limit"
+            ]
+        },
+        {
+            "path": "filer/v101/filers",
+            "query": [
+                "aid",
+                "electionSeatNid",
+                "limit"
+            ]
+        },
+        {
+            "path": "filer/v101/filers",
+            "query": [
+                "aid",
+                "electionMeasureNid",
+                "limit"
+            ]
+        },
+        {
+            "path": "filer/v101/filers",
+            "query": [
+                "aid",
+                "candidateNid",
+                "limit"
+            ]
+        }
+    ]
+}
