@@ -3,9 +3,10 @@ from ast import arg
 import json
 from pathlib import Path
 from pprint import PrettyPrinter
+import pandas as pd
 from .create_socrata_csv import AUTH, PARAMS, BASE_URL, session, save_source_data
 
-filing_elements = 'filing_elements'
+FILING_ELEMENTS_NAME = 'filing_elements'
 
 def get_filing_elements_by_filing(filing_nid):
     """ Get filing-elements by filing_nid """
@@ -41,32 +42,15 @@ def load_filers() -> list[dict]:
 
 def load_filing_elements():
     """ Load filing elements from disk """
-    return load_from_file(filing_elements)
+    return load_from_file(FILING_ELEMENTS_NAME)
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--download', action='store_true')
-
-    args = parser.parse_args()
-
-    pp = PrettyPrinter()
-    filings = load_filings()
-
-    filers = load_filers()
-
-    t_reid = [ f for f in filers if 'Reid' in f['filerName'] and '2022' in f['filerName'] ][0]
-    reid_nid = t_reid['filerNid']
-
-    reid_filings = [ f for f in filings if int(f['filerMeta']['filerId']) == int(reid_nid) ]
-
-    f_elements = (get_multiple_filing_elements(reid_filings)
-        if args.download
-        else load_filing_elements())
-    save_source_data({ filing_elements: f_elements })
-
+def get_unitemized_trans_for_filings(filings, filing_elements):
+    """ Get unitemized transaction amounts by date
+        from filings
+    """
     filing_parts = {}
     filing_dates = {}
-    for f in f_elements:
+    for f in filing_elements:
         filing_nid = f['filingNid']
 
         if filing_nid not in filing_dates:
@@ -81,14 +65,37 @@ def main():
 
         filing_parts[filing_date].append(f)
 
-    pp.pprint({
+    return {
         d: f['elementModel']['scheduleA']['line2']
         for d, parts
         in filing_parts.items()
             for f in parts
             if f['elementActivityType'] != 'Superseded'
             and f['elementClassification'] == 'Summary'
-    })
+    }
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--download', action='store_true')
+
+    args = parser.parse_args()
+
+    pp = PrettyPrinter()
+    filings = load_filings()
+
+    filers = load_filers()
+
+    filer_to_cand = pd.read_csv('input/filer_to_candidate.csv')
+
+    t_reid = [ f for f in filers if 'Reid' in f['filerName'] and '2022' in f['filerName'] ][0]
+    reid_nid = t_reid['filerNid']
+
+    reid_filings = [ f for f in filings if int(f['filerMeta']['filerId']) == int(reid_nid) ]
+
+    f_elements = (get_multiple_filing_elements(reid_filings)
+        if args.download
+        else load_filing_elements())
+    save_source_data({ FILING_ELEMENTS_NAME: f_elements })
 
 if __name__ == '__main__':
     main()
