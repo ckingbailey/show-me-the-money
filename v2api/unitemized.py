@@ -1,9 +1,9 @@
 import argparse
 from ast import arg
 import json
+from pathlib import Path
 from pprint import PrettyPrinter
 from .create_socrata_csv import AUTH, PARAMS, BASE_URL, session, save_source_data
-from .late_contributions import load_filings, load_from_file
 
 filing_elements = 'filing_elements'
 
@@ -27,9 +27,21 @@ def get_multiple_filing_elements(filings):
 
     return filing_elements
 
+def load_from_file(filepath:str) -> list[dict]:
+    """ Load json file from file name, without extension, within example/ folder """
+    return json.loads(Path(f'example/{filepath}.json').read_text(encoding='utf8'))
+
+def load_filings() -> list[dict]:
+    """ Load filings from disk """
+    return load_from_file('filings')
+
+def load_filers() -> list[dict]:
+    """ Load filers from disk """
+    return load_from_file('filers')
+
 def load_filing_elements():
     """ Load filing elements from disk """
-    return load_from_file(f'{filing_elements}.json')
+    return load_from_file(filing_elements)
 
 def main():
     parser = argparse.ArgumentParser()
@@ -39,14 +51,44 @@ def main():
 
     pp = PrettyPrinter()
     filings = load_filings()
-    four_sixties = [ f for f in filings if f['specificationRef']['name'] == 'FPPC460' ]
 
-    f_elements = (get_multiple_filing_elements(four_sixties[:10])
+    filers = load_filers()
+
+    t_reid = [ f for f in filers if 'Reid' in f['filerName'] and '2022' in f['filerName'] ][0]
+    reid_nid = t_reid['filerNid']
+
+    reid_filings = [ f for f in filings if int(f['filerMeta']['filerId']) == int(reid_nid) ]
+
+    f_elements = (get_multiple_filing_elements(reid_filings)
         if args.download
         else load_filing_elements())
     save_source_data({ filing_elements: f_elements })
 
-    pp.pprint(f_elements[0])
+    filing_parts = {}
+    filing_dates = {}
+    for f in f_elements:
+        filing_nid = f['filingNid']
+
+        if filing_nid not in filing_dates:
+            filing = [ f for f in filings if f['filingNid'] == filing_nid ][0]
+            filing_date = filing['filingMeta']['legalFilingDate']
+            filing_dates[filing_nid] = filing_date
+        else:
+            filing_date = filing_dates[filing_nid]
+
+        if filing_date not in filing_parts:
+            filing_parts[filing_date] = []
+
+        filing_parts[filing_date].append(f)
+
+    pp.pprint({
+        d: f['elementModel']['scheduleA']['line2']
+        for d, parts
+        in filing_parts.items()
+            for f in parts
+            if f['elementActivityType'] != 'Superseded'
+            and f['elementClassification'] == 'Summary'
+    })
 
 if __name__ == '__main__':
     main()
