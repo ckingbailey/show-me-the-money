@@ -1,8 +1,10 @@
 import argparse
 from ast import arg
+from itertools import zip_longest
 import json
 from pathlib import Path
 from pprint import PrettyPrinter
+from textwrap import fill
 from typing import Iterable
 from unittest.mock import Base
 import pandas as pd
@@ -14,7 +16,9 @@ from .create_socrata_csv import (
     save_source_data,
     df_from_candidates,
     df_from_filings,
-    df_from_filers)
+    df_from_filers,
+    get_contrib_category,
+    get_address)
 
 FILING_ELEMENTS_NAME = 'filing_elements'
 
@@ -228,6 +232,69 @@ def get_filings_for_filers(filers:Iterable[str], filings:list[dict]) -> list[dic
         in filings
         if str(f['filerMeta']['filer_id']) in filers
     ]
+
+class Transaction:
+    """ A transaction record """
+    def __init__(self, transaction_record: dict):
+        self.element_nid = transaction_record['elementNid']
+        self.tran_id = transaction_record['transaction']['tranId']
+        self.filing_nid = transaction_record['filingNid']
+        self.contributor_name = transaction_record['allNames']
+        self.contributor_type = ('Individual'
+            if transaction_record['transaction']['entityCd'] == 'IND'
+            else 'Organization')
+        self.contributor_category = get_contrib_category(
+            transaction_record['transaction']['entityCd'])
+        self.contributor_location = None
+        self.amount = transaction_record['calculatedAmount']
+        self.receipt_date = transaction_record['transaction']['tranDate']
+        self.expn_code = transaction_record['transaction']['tranCode']
+        self.expenditure_description = transaction_record['transaction']['tranDscr'] or ''
+        self.form = transaction_record['calTransactionType']
+        self.party = None
+
+        self.contributor_address = None
+        self.city = None
+        self.state = None
+        self.zip_code = None
+        self.contributor_region = None
+
+        self.get_address(transaction_record['addresses'])
+
+    def from_unitemized(self, unitemized: dict):
+        """ Create a Transaction record from an "UnItemized" filing-element record """
+        return self.__class__({
+            **unitemized,
+            'transaction': {
+                k: v
+                for k, v
+                in zip_longest(['tranId', 'entityCd', 'tranDate', 'tranCode', 'tranDscr'],
+                    fillvalue='Unitemized')
+            },
+            'allNames': 'Unitemized',
+            'calculatedAmount': unitemized['elementModel']['amount'],
+            'calTransactionType': unitemized['specificationRef']['name'],
+            'addresses': [{
+                'contributor_address': None,
+                'city': None,
+                'state': None,
+                'zip_code': None,
+                'contributor_region': None
+            }]
+        })
+
+    def get_address(self, transaction_addresses: list[dict]) -> None:
+        """ Set address fields """
+        address = get_address(transaction_addresses)
+        self.contributor_address = address['contributor_address']
+        self.city = address['city']
+        self.state = address['state']
+        self.zip_code = address['zip_code']
+        self.contributor_region = address['contributor_region']
+
+    @property
+    def df(self):
+        return pd.DataFrame(self.__dict__)
 
 def main():
     """ Do whatever I'm currently working on """
