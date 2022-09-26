@@ -3,10 +3,145 @@ from ast import arg
 import json
 from pathlib import Path
 from pprint import PrettyPrinter
+from typing import Iterable
+from unittest.mock import Base
 import pandas as pd
-from .create_socrata_csv import AUTH, PARAMS, BASE_URL, session, save_source_data
+from .create_socrata_csv import (
+    AUTH,
+    PARAMS,
+    BASE_URL,
+    session,
+    save_source_data,
+    df_from_candidates,
+    df_from_filings,
+    df_from_filers)
 
 FILING_ELEMENTS_NAME = 'filing_elements'
+
+class Routes:
+    """ NetFile routes """
+    filings = '/filing/v101/filings'
+    filers = '/filer/v101/filers'
+    transactions = '/cal/v101/transaction-elements'
+    filing_activities = 'filing/v101/filing-activities'
+    filing_elements = '/filing/v101/filing-elements'
+
+class BaseEndpointClient:
+    """ Base functionality for fetching from NetFile endpoint """
+    def __init__(self, base_url, base_params, auth):
+        self.has_next_page = True
+        self.base_url = base_url
+        self.base_params = base_params
+        self.auth = auth
+        self.session = session
+
+class FilingElementsClient(BaseEndpointClient):
+    """ Fetch filing elements """
+    def __init__(self, base_url, base_params, auth, **kwargs):
+        super().__init__(base_url, base_params, auth)
+        route = Routes.filing_elements
+        self.url = f'{self.base_url}{route}'
+        self.params = {
+            **self.base_params,
+            'offset': 0,
+            'limit': 1000
+        }
+        self._fetchable_by = [
+            'filing_nid',
+            'element_nid'
+        ]
+
+        # Prepare own query attributes
+        self._set_next_fetch_by = self._configure_fetch_by(**kwargs)
+
+    def _configure_next_request(self, res):
+        self.has_next_page = res['hasNextPage']
+        next_offset = self.params['limit'] + self.params['offset'] if self.has_next_page else None
+
+        if next_offset is None:
+            try:
+                self._set_next_fetch_by()
+            except StopIteration:
+                pass
+        else:
+            self.params['offset'] = next_offset
+
+    def _get(self, params):
+        res = self.session.get(self.url, auth=self.auth, params=params)
+        body = res.json()
+        print('.', end='', flush=True)
+        self._configure_next_request(body)
+
+        return body['results']
+
+    def fetch(self):
+        """ Fetch all filings elements,
+            probably for filing_nids
+        """
+        return self._get(self.params)
+
+    def _configure_fetch_by(self, **kwargs):
+        if len(kwargs) > 1:
+            raise ValueError(f'filing_elements may only be queried by 1 param type, got {kwargs}')
+
+        fetch_by = list(kwargs.keys())[0]
+        if fetch_by not in self._fetchable_by:
+            raise ValueError(f'Unknown request parameter {fetch_by}')
+
+        return getattr(self, f'_set_next_{fetch_by}')(kwargs[fetch_by])
+
+    def _set_next_filing_nid(self, filing_nids:list[str]=None):
+        """ Add 'filing_nid' to self.params """
+        filing_nids_iter = iter(filing_nids)
+        filing_nid = next(filing_nids_iter)
+        fetch_by = 'filingNid'
+        def set_next():
+            self.params[fetch_by] = filing_nid
+
+        return set_next
+
+    def _set_next_element_nid(self, element_nid):
+        """ Add /{element_nid} to self.url """
+        pass
+
+class FilingClient(BaseEndpointClient):
+    pass
+
+class FilerClient(BaseEndpointClient):
+    pass
+
+class TransactionsClient(BaseEndpointClient):
+    pass
+
+class FilingActivityClient(BaseEndpointClient):
+    pass
+
+class NetFileClient:
+    """ Fetch data from NetFile V2 endpoints """
+    base_url = BASE_URL
+    base_params = PARAMS
+    auth = AUTH
+    routes = Routes
+    session = session
+    _fetcher = {
+        'filing_elements': FilingElementsClient,
+        'filings': FilingClient,
+        'filer': FilerClient,
+        'transaction': TransactionsClient,
+        'filing_activities': FilingActivityClient
+    }
+
+    @classmethod
+    def fetch(cls, endpoint, **kwargs):
+        """ Fetch all of a particular record type """
+        fetcher = cls._fetcher[endpoint](cls.base_url, cls.base_params, cls.auth, **kwargs)
+        results = []
+
+        while fetcher.has_next_page:
+            results += fetcher.fetch()
+
+        print('')
+        return results
 
 def get_filing_elements_by_filing(filing_nid):
     """ Get filing-elements by filing_nid """
@@ -20,10 +155,10 @@ def get_filing_elements_by_filing(filing_nid):
     f_elements = res.json()
     return f_elements['results']
 
-def get_multiple_filing_elements(filings):
+def get_multiple_filing_elements(filings:pd.DataFrame) -> pd.DataFrame:
+    """ Get all filing elements for a list of filings """
     filing_elements = []
-    for f in filings:
-        filing_nid = f['filingNid']
+    for filing_nid in filings['filing_nid']:
         filing_elements += get_filing_elements_by_filing(filing_nid)
 
     return filing_elements
@@ -32,13 +167,13 @@ def load_from_file(filepath:str) -> list[dict]:
     """ Load json file from file name, without extension, within example/ folder """
     return json.loads(Path(f'example/{filepath}.json').read_text(encoding='utf8'))
 
-def load_filings() -> list[dict]:
+def load_filings() -> pd.DataFrame:
     """ Load filings from disk """
-    return load_from_file('filings')
+    return df_from_filings(load_from_file('filings'))
 
-def load_filers() -> list[dict]:
+def load_filers() -> pd.DataFrame:
     """ Load filers from disk """
-    return load_from_file('filers')
+    return df_from_filers(load_from_file('filers'))
 
 def load_filing_elements():
     """ Load filing elements from disk """
@@ -74,28 +209,74 @@ def get_unitemized_trans_for_filings(filings, filing_elements):
             and f['elementClassification'] == 'Summary'
     }
 
+def get_filer_nid_from_name_and_election(
+    last_name: str,
+    election_year: int,
+    filers: list[dict]) -> str:
+    """ Get NetFile filerNid from candidate last name and election year """
+    filer = [ f for f in filers if last_name in f['filerName'] and election_year in f['filerName'] ][0]
+    return filer['filerNid']
+
+def get_filings_for_filer(filer_nid:str, filings:list[dict]) -> list[dict]:
+    """ Get all filings for one filer_nid """
+    return [ f for f in filings if str(f['filerMeta']['filerId']) == str(filer_nid) ]
+
+def get_filings_for_filers(filers:Iterable[str], filings:list[dict]) -> list[dict]:
+    """ Get all filings for a list of filerNids """
+    return [
+        f for f
+        in filings
+        if str(f['filerMeta']['filer_id']) in filers
+    ]
+
 def main():
+    """ Do whatever I'm currently working on """
     parser = argparse.ArgumentParser()
     parser.add_argument('--download', action='store_true')
-
     args = parser.parse_args()
 
-    pp = PrettyPrinter()
     filings = load_filings()
 
     filers = load_filers()
 
-    filer_to_cand = pd.read_csv('input/filer_to_candidate.csv')
+    filer_to_cand = df_from_candidates()
+    filer_id_mapping = filer_to_cand.merge(filers, how='left', on='filer_id')
 
-    t_reid = [ f for f in filers if 'Reid' in f['filerName'] and '2022' in f['filerName'] ][0]
-    reid_nid = t_reid['filerNid']
+    candidate_filings = filings.merge(filer_id_mapping, how='right', on='filer_nid')
+    print('num candidate filings', len(candidate_filings))
 
-    reid_filings = [ f for f in filings if int(f['filerMeta']['filerId']) == int(reid_nid) ]
+    if args.download:
+        filing_elements = NetFileClient.fetch(
+            'filing_elements',
+            filing_nid=candidate_filings['filing_nid']
+        )
+        save_source_data({ FILING_ELEMENTS_NAME: filing_elements })
+    else:
+        filing_elements = load_filing_elements()
 
-    f_elements = (get_multiple_filing_elements(reid_filings)
-        if args.download
-        else load_filing_elements())
-    save_source_data({ FILING_ELEMENTS_NAME: f_elements })
+    print('num filing elements', len(filing_elements))
+
+    print('What are the possible values of elementActivityType?', set(f['elementActivityType'] for f in filing_elements))
+
+    transaction_elements = [
+        f for f
+        in filing_elements
+        if f['elementClassification'] == 'Transaction'
+        and f['elementActivityType'] != 'Superseded'
+    ]
+    print('num transaction elements', len(transaction_elements))
+    print(transaction_elements[0])
+
+    pp = PrettyPrinter()
+    unitemized_elements = [
+        f for f
+        in filing_elements
+        if f['elementClassification'] == 'UnItemizedTransaction'
+        and f['elementType'] == 'F460ALine2'
+        and f['elementActivityType'] != 'Superseded'
+    ]
+    print('num unitemized transaction elements', len(unitemized_elements))
+    pp.pprint(unitemized_elements[0])
 
 if __name__ == '__main__':
     main()
