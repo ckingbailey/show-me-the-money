@@ -261,25 +261,27 @@ class Transaction:
 
         self.get_address(transaction_record['addresses'])
 
-    def from_unitemized(self, unitemized: dict):
+    @classmethod
+    def from_unitemized(cls, unitemized: dict):
         """ Create a Transaction record from an "UnItemized" filing-element record """
-        return self.__class__({
+        return cls({
             **unitemized,
             'transaction': {
                 k: v
                 for k, v
                 in zip_longest(['tranId', 'entityCd', 'tranDate', 'tranCode', 'tranDscr'],
+                    ['Unitemized'],
                     fillvalue='Unitemized')
             },
             'allNames': 'Unitemized',
             'calculatedAmount': unitemized['elementModel']['amount'],
             'calTransactionType': unitemized['specificationRef']['name'],
             'addresses': [{
-                'contributor_address': None,
+                'line1': None,
+                'line2': None,
                 'city': None,
                 'state': None,
-                'zip_code': None,
-                'contributor_region': None
+                'zip': None
             }]
         })
 
@@ -294,7 +296,11 @@ class Transaction:
 
     @property
     def df(self):
-        return pd.DataFrame(self.__dict__)
+        """ Get it as a Pandas DataFrame """
+        df = pd.DataFrame([self.__dict__])
+        df['receipt_date'] = pd.to_datetime(df['receipt_date'])
+
+        return df
 
 def main():
     """ Do whatever I'm currently working on """
@@ -323,8 +329,6 @@ def main():
 
     print('num filing elements', len(filing_elements))
 
-    print('What are the possible values of elementActivityType?', set(f['elementActivityType'] for f in filing_elements))
-
     transaction_elements = [
         f for f
         in filing_elements
@@ -332,18 +336,17 @@ def main():
         and f['elementActivityType'] != 'Superseded'
     ]
     print('num transaction elements', len(transaction_elements))
-    print(transaction_elements[0])
 
     pp = PrettyPrinter()
     unitemized_elements = [
-        f for f
+        Transaction.from_unitemized(f) for f
         in filing_elements
         if f['elementClassification'] == 'UnItemizedTransaction'
         and f['elementType'] == 'F460ALine2'
         and f['elementActivityType'] != 'Superseded'
     ]
     print('num unitemized transaction elements', len(unitemized_elements))
-    pp.pprint(unitemized_elements[0])
+    pp.pprint(unitemized_elements[0].df)
 
 if __name__ == '__main__':
     main()
