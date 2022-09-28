@@ -22,6 +22,8 @@ from .create_socrata_csv import (
 
 FILING_ELEMENTS_NAME = 'filing_elements'
 
+pp = PrettyPrinter()
+
 class Routes:
     """ NetFile routes """
     filings = '/filing/v101/filings'
@@ -236,21 +238,29 @@ def get_filings_for_filers(filers:Iterable[str], filings:list[dict]) -> list[dic
 class Transaction:
     """ A transaction record """
     def __init__(self, transaction_record: dict):
+        transaction_model = transaction_record['transaction']
+
         self.element_nid = transaction_record['elementNid']
-        self.tran_id = transaction_record['transaction']['tranId']
+        self.tran_id = transaction_model['tranId']
         self.filing_nid = transaction_record['filingNid']
-        self.contributor_name = transaction_record['allNames']
+
+        transactor_first_name = transaction_model['tranNamF'] or ''
+        transactor_last_name = transaction_model['tranNamL'] or ''
+        contributor_name = (
+            transaction_record.get('allNames')
+            or f'{transactor_first_name} {transactor_last_name}'.strip())
+        self.contributor_name = contributor_name
+
         self.contributor_type = ('Individual'
-            if transaction_record['transaction']['entityCd'] == 'IND'
+            if transaction_model['entityCd'] == 'IND'
             else 'Organization')
-        self.contributor_category = get_contrib_category(
-            transaction_record['transaction']['entityCd'])
+        self.contributor_category = get_contrib_category(transaction_model['entityCd'])
         self.contributor_location = None
-        self.amount = transaction_record['calculatedAmount']
-        self.receipt_date = transaction_record['transaction']['tranDate']
-        self.expn_code = transaction_record['transaction']['tranCode']
-        self.expenditure_description = transaction_record['transaction']['tranDscr'] or ''
-        self.form = transaction_record['calTransactionType']
+        self.amount = transaction_model['tranAmt1']
+        self.receipt_date = transaction_model['tranDate']
+        self.expn_code = transaction_model['tranCode']
+        self.expenditure_description = transaction_model['tranDscr'] or ''
+        self.form = transaction_model['calTransactionType']
         self.party = None
 
         self.contributor_address = None
@@ -259,7 +269,7 @@ class Transaction:
         self.zip_code = None
         self.contributor_region = None
 
-        self.get_address(transaction_record['addresses'])
+        self.get_address(transaction_model)
 
     @classmethod
     def from_unitemized(cls, unitemized: dict):
@@ -267,27 +277,32 @@ class Transaction:
         return cls({
             **unitemized,
             'transaction': {
-                k: v
-                for k, v
-                in zip_longest(['tranId', 'entityCd', 'tranDate', 'tranCode', 'tranDscr'],
-                    ['Unitemized'],
-                    fillvalue='Unitemized')
-            },
-            'allNames': 'Unitemized',
-            'calculatedAmount': unitemized['elementModel']['amount'],
-            'calTransactionType': unitemized['specificationRef']['name'],
-            'addresses': [{
-                'line1': None,
-                'line2': None,
-                'city': None,
-                'state': None,
-                'zip': None
-            }]
+                'tranId': 'Unitemized',
+                'entityCd': 'Unitemized',
+                'tranDate': unitemized['elementModel']['calculatedDate'],
+                'tranCode': 'Unitemized',
+                'tranDscr': 'Unitemized',
+                'tranNamF': '',
+                'tranNamL': 'Unitemized',
+                'tranAdr1': '',
+                'tranAdr2': '',
+                'tranCity': '',
+                'tranST': '',
+                'tranZip4': '',
+                'tranAmt1': unitemized['elementModel']['amount'],
+                'calTransactionType': unitemized['specificationRef']['name']
+            }
         })
 
-    def get_address(self, transaction_addresses: list[dict]) -> None:
+    def get_address(self, transaction_model: dict) -> None:
         """ Set address fields """
-        address = get_address(transaction_addresses)
+        address = get_address([{
+            "line1": transaction_model['tranAdr1'],
+            "line2": transaction_model['tranAdr2'],
+            "city": transaction_model['tranCity'],
+            "state": transaction_model['tranST'],
+            "zip": transaction_model['tranZip4']
+        }])
         self.contributor_address = address['contributor_address']
         self.city = address['city']
         self.state = address['state']
@@ -330,14 +345,17 @@ def main():
     print('num filing elements', len(filing_elements))
 
     transaction_elements = [
-        f for f
+        Transaction({
+            **f,
+            'transaction': f['elementModel']
+        }) for f
         in filing_elements
         if f['elementClassification'] == 'Transaction'
         and f['elementActivityType'] != 'Superseded'
     ]
     print('num transaction elements', len(transaction_elements))
+    pp.pprint(transaction_elements[0])
 
-    pp = PrettyPrinter()
     unitemized_elements = [
         Transaction.from_unitemized(f) for f
         in filing_elements
