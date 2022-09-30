@@ -218,7 +218,7 @@ def fetch_source_data() -> tuple[list[dict]]:
     transactions = get_trans()
 
     print('===== Get filers =====')
-    unique_filer_nids = set(f['filerMeta']['filer_nid'] for f in filings)
+    unique_filer_nids = set(f['filerMeta']['filerId'] for f in filings)
     filers = get_all_filers(unique_filer_nids)
 
     return filings, transactions, filers
