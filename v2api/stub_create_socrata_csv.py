@@ -50,4 +50,4 @@ def save_source_data(monkeypatch, tmp_path):
     monkeypatch.setattr(mod, 'EXAMPLE_DATA_DIR', example_data_dir)
 
 def test_main(stub_get_filings, stub_get_filer, stub_get_trans, output_test_data, save_source_data):
-    mod.main()
+    mod.main(*mod.load_source_data())

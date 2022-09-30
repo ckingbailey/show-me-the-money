@@ -1,4 +1,4 @@
-﻿Filer Name,Is Terminated?,SOS ID,Type,Local Agency ID,election_year,candidate,contest,citywide,incumbent,start,end,is_winner,ballot_status
+Filer Name,Is Terminated?,SOS ID,Type,Local Agency ID,election_year,candidate,contest,citywide,incumbent,start,end,is_winner,ballot_status
 Aaron Clay for Oakland City Council 2020,Yes,1428941,Candidate or Officeholder,COAK-155191,2020,Aaron Clay,City Council District 7,District,FALSE,1/1/2020,,FALSE,Qualified
 Committee to Elect Allyssa Victory for Oakland Mayor 2022,No,1439739,Candidate or Officeholder,COAK-155443,2022,Allyssa Victory Villanueva,Mayor,Citywide,FALSE,7/23/2021,,,
 Austin Dannhaus for Oakland School Board 2020,Yes,1427828,Candidate or Officeholder,COAK-155192,2020,Austin Dannhaus,OUSD District 1,School District,FALSE,1/1/2020,,FALSE,Qualified
@@ -15,10 +15,8 @@ Johnson Oakland Mayor 2022,No,1441869,Candidate or Officeholder,COAK-155491,2022
 Elbert Owens for Mayor 2022,No,1448962,Candidate or Officeholder,COAK-155541,2022,Elbert Owens,Mayor,Citywide,FALSE,,,,
 Elias Ferran for City Attorney 2020,Yes,1426949,Candidate or Officeholder,COAK-155175,2020,Eli Ferran,City Attorney,Citywide,FALSE,6/15/2020,,FALSE,Qualified
 Faye Taylor Oakland City Council District #3 (2020),Yes,1427385,Candidate or Officeholder,COAK-154941,2020,Faye Taylor,City Council District 3,District,FALSE,1/1/2020,,FALSE,Qualified
-Hodge for Oakland Mayor 2022,No,1442227,Candidate or Officeholder,COAK-155458,2022,"Gregory Hodge
-",Mayor,Citywide,FALSE,9/24/2021,,,
-De La Fuente for Mayor 2022,No,1446236,Candidate or Officeholder,COAK-155556,2022,"Ignacio De La Fuente
-",Mayor,Citywide,FALSE,,,,
+Hodge for Oakland Mayor 2022,No,1442227,Candidate or Officeholder,COAK-155458,2022,Gregory Hodge,Mayor,Citywide,FALSE,9/24/2021,,,
+De La Fuente for Mayor 2022,No,1446236,Candidate or Officeholder,COAK-155556,2022,Ignacio De La Fuente,Mayor,Citywide,FALSE,,,,
 Janani Ramachandran for Oakland City Council District 4 2022,No,1442792,Candidate or Officeholder,COAK-155501,2022,Janani Ramachandran,City Council District 4,District,FALSE,10/28/2021,,,
 Committee to Elect John Mimosa Marks for Oakland Mayor 2022,No,1446906,Candidate or Officeholder,COAK-155537,2022,John Marks,Mayor,Citywide,FALSE,,,,
 Jorge Lerma for Oakland School Board 2020,No,1427022,Candidate or Officeholder,COAK-155153,2020,Jorge C. Lerma,OUSD District 5,School District,FALSE,1/1/2019,,FALSE,Qualified
@@ -45,8 +43,7 @@ Re-Elect Rebecca Kaplan for City Council 2020,Yes,1419466,Candidate or Officehol
 Richard Santos Raya for Oakland City Council District 5 2020,Yes,1429104,Candidate or Officeholder,COAK-155186,2020,Richard Santos Raya,City Council District 5,District,FALSE,1/1/2020,,FALSE,Qualified
 Bob Jackson for Oakland City Council 2020,Yes,1421001,Candidate or Officeholder,COAK-154768,2020,"Robert ""Bob"" Jackson",City Council District 7,District,FALSE,1/1/2019,,FALSE,Qualified
 Seneca Scott for Oakland City Council District 3 2020,Yes,1446912,Candidate or Officeholder,COAK-155196,2020,Seneca Scott,City Council District 3,District,FALSE,1/1/2020,,FALSE,Qualified
-Seneca Scott for Oakland Mayor 2022,No,1444317,Candidate or Officeholder,COAK-155516,2022,"Seneca Scott
-",Mayor,Citywide,FALSE,1/18/2022,,,
+Seneca Scott for Oakland Mayor 2022,No,1444317,Candidate or Officeholder,COAK-155516,2022,Seneca Scott,Mayor,Citywide,FALSE,1/18/2022,,,
 Sheila Pope Lawrence 4 OUSD School Board 2020,Yes,1427317,Candidate or Officeholder,COAK-154944,2020,Sheila Pope Lawrence,OUSD District 5,School District,FALSE,1/1/2020,,FALSE,Qualified
 Sheng Thao for Oakland Mayor 2022,No,1442594,Candidate or Officeholder,COAK-155502,2022,Sheng Thao,Mayor,Citywide,FALSE,4/4/2019,,,
 Stacy Thomas for Oakland School District 1 2020,Yes,1432118,Candidate or Officeholder,COAK-155201,2020,Stacy Thomas,OUSD District 1,School District,FALSE,9/3/2020,,FALSE,Qualified
@@ -59,3 +56,12 @@ COALITION TO ELECT VALARIE BACHELOR FOR SCHOOL BOARD 2022,No,1451532,Candidate o
 "Van Cedric Williams for Oakland Unified School Board Seat 3, 2020",No,1427826,Candidate or Officeholder,COAK-155159,2020,VanCedric Williams,OUSD District 3,School District,FALSE,6/11/2020,,TRUE,Qualified
 VALERIO FOR OUSD SCHOOL BOARD 2020,Yes,1422389,Candidate or Officeholder,COAK-154900,2020,Victor Javier Valerio,OUSD District 7,School District,FALSE,1/1/2019,,FALSE,Qualified
 Zoe Lopez-Meraz for City Council 2020,Yes,1429858,Candidate or Officeholder,COAK-155200,2020,Zoe Lopez-Meraz,City Council District 5,District,FALSE,9/2/2020,,FALSE,Qualified
+Friends of Oakland Public Schools - Yes on Measure H,No,960997,Ballot Measure,COAK-153045,2022,Measure H,Ballot Measure,Citywide,,7/1/2022,,,Qualified
+Neighbors for the Oakland Library - Yes on C!,No,1445857,Ballot Measure,COAK-155549,2022,Measure C,Ballot Measure,Citywide,,3/24/2022,,TRUE,Qualified
+"Yes on T - Invest In Our Oakland 2022, Sponsored by SEIU Local 1021 and IFPTE Local 21",No,1444350,Ballot Measure,COAK-155536,2022,Measure T,Ballot Measure,Citywide,,1/1/2022,,,Qualified
+"Oaklanders Together, a coalition of small and large businesses, business-serving organizations, and the Oakland Metropolitan Chamber of Commerce",No,1445852,Ballot Measure,COAK-155554,2022,Measure T,Ballot Measure,Citywide,,1/1/2022,,,Qualified
+Oakland Rising Ballot Committee Supporting T and W sponsored by Center for Empowered Politics,No,,Ballot Measure,COAK-155709,2022,Measure T and W,Ballot Measure,Citywide,,9/7/2022,,,Qualified
+"Yes on W, Oakland Fair Elections, Sponsored by Civic Advocacy Organizations",No,1448942,Ballot Measure,COAK-155654,2022,Measure W,Ballot Measure,Citywide,,1/1/2022,,,Qualified
+"Oaklanders for the Oakland Zoo, Major Funding by the Conservation Society of California",No,1444480,Ballot Measure,COAK-155542,2022,Measure Y,Ballot Measure,Citywide,,1/1/2022,,,Qualified
+Californians for Safer Streets Supporting Ignacio De La Fuente for Mayor of Oakland 2022,No,1452451,Not Candidate-controlled,COAK-155685,2022,Ignacio De La Fuente,Mayor,Citywide,,,,,
+Working Families for a Better Oakland supporting Sheng Thao for Oakland Mayor 2022,No,1452920,Not Candidate-controlled,COAK-155703,2022,Sheng Thao,Mayor,Citywide,,,,,

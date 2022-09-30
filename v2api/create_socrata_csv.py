@@ -16,6 +16,7 @@ Socrata required fields:
   "party",
 ]
 """
+import argparse
 from datetime import datetime
 from itertools import zip_longest
 import json
@@ -209,6 +210,40 @@ def get_all_filers(filer_nids: set) -> list[dict]:
 
     return filers
 
+def fetch_source_data() -> tuple[list[dict]]:
+    print('===== Get filings =====')
+    filings = get_all_filings()
+
+    print('===== Get transactions =====')
+    transactions = get_trans()
+
+    print('===== Get filers =====')
+    unique_filer_nids = set(f['filerMeta']['filerId'] for f in filings)
+    filers = get_all_filers(unique_filer_nids)
+
+    return filings, transactions, filers
+
+def load_source_data() -> tuple[list[dict]]:
+    source_data = []
+    for f in ['filings', 'transactions', 'filers']:
+        source_data.append(json.loads(Path(f'example/{f}.json').read_text(encoding='utf8')))
+
+    return tuple(source_data)
+
+def get_source_data(download=False) -> tuple[list[dict]]:
+    if download:
+        filings, transactions, filers = fetch_source_data()
+
+        save_source_data({
+            'filings': filings,
+            'transactions': transactions,
+            'filers': filers
+        })
+
+        return filings, transactions, filers
+    else:
+        return load_source_data()
+
 def df_from_filings(filings):
     """ Transform filings into Pandas DataFrame """
     return pd.DataFrame([{
@@ -230,7 +265,16 @@ def get_relative_location(city: str, state: str) -> str:
     return 'Out of State'
 
 def get_address(addresses: list[dict]) -> dict[str, str]:
-    """ Get street address from addresses, or return empty string """
+    """ Get street address from addresses, or return empty string
+        Expects address dicts in the form
+        {
+            line1
+            line2
+            city
+            state
+            zip
+        }
+    """
     keys = [
         'contributor_address',
         'city',
@@ -244,21 +288,16 @@ def get_address(addresses: list[dict]) -> dict[str, str]:
 
     address = addresses[0]
 
-    street = f'{address["line1"] or ""} {address["line2"] or ""}'.strip()
-    city = 'Oakland' if address['city'] in OAKLAND_MISSPELLINGS else address['city']
+    street = f'{address.get("line1") or ""} {address.get("line2") or ""}'.strip()
+    city = 'Oakland' if address.get('city') in OAKLAND_MISSPELLINGS else address.get('city')
+    city_state_zip = ' '.join([city or '', address['state'] or '', address['zip'] or '']).strip()
+    contributor_address = f'{street}, {city_state_zip}' if (street and city_state_zip) else ''
 
     return {
         k: v
         for k, v
         in zip(keys, [
-            ', '.join([
-                street,
-                ' '.join([
-                    city,
-                    address['state'],
-                    address['zip']
-                ])
-            ]),
+            contributor_address,
             city,
             address['state'],
             address['zip'],
@@ -351,15 +390,61 @@ def df_from_filers(filers):
     } for f in filers if f['registrations'].get('CA SOS') is not None
     ]).astype({ 'filer_id': 'string' })
 
+def df_from_candidates() -> pd.DataFrame:
+    """ Get DataFrame of candidates from CSV """
+    filer_to_cand_cols = [
+        'local_agency_id',
+        'filer_id',
+        'election_year',
+        'filer_name',
+        'filer_name_local',
+        'office',
+        'start_date',
+        'end_date'
+    ]
+    filer_to_cand = pd.read_csv(FILER_TO_CAND_PATH, dtype={
+        'Filer Name': 'string',
+        'Is Terminated?': 'string',
+        'SOS ID': 'string',
+        'Type': 'string',
+        'Local Agency ID': 'string',
+        'election_year': int,
+        'candidate': 'string',
+        'contest': 'string',
+        'citywide': 'string',
+        'incumbent': 'string',
+        'start': 'string',
+        'end': 'string',
+        'is_winner': 'string',
+        'ballot_status': 'string'
+    })
+    filer_to_cand = filer_to_cand.rename(columns={
+        'SOS ID': 'filer_id',
+        'Local Agency ID': 'local_agency_id',
+        'Filer Name': 'filer_name_local',
+        'contest': 'office',
+        'candidate': 'filer_name',
+        'start': 'start_date',
+        'end': 'end_date'
+    })[
+        filer_to_cand_cols
+    ].astype({ 'filer_id': 'string' })
+
+    filer_to_cand['end_date'] = pd.to_datetime(filer_to_cand['end_date'])
+    filer_to_cand['start_date'] = pd.to_datetime(filer_to_cand['start_date'])
+    filer_to_cand['jurisdiction'] = filer_to_cand.apply(get_jurisdiction, axis=1)
+
+    return filer_to_cand
+
 def get_jurisdiction(row):
     """ Get jurisdiction of office, one of
         - Council District
         - OUSD District
         - Citywide
     """
-    if row['office'].startswith('City Council District '):
+    if row['office'].lower().startswith('city council district '):
         return 'Council District'
-    if row['office'].startswith('OUSD District'):
+    if row['office'].lower().startswith('ousd district'):
         return 'Oakland Unified School District'
     
     return 'Citywide'
@@ -388,7 +473,7 @@ def save_previous_version(path_name):
         new_file_path = p.parent / new_file_name
         p.rename(new_file_path)
 
-def main():
+def main(filings, transactions, filers):
     """ Query Netfile results 1 page at a time
         Build Pandas DataFrame
         and then save it as CSV
@@ -399,17 +484,8 @@ def main():
         3. Match filingDate to electionDate, extract year from date
         4. Query /filer/v101/filers/{filer_nid}, get electionInfluences[electionDate].seat.officeName
     """
-    print('===== Get filings =====')
-    filings = get_all_filings()
-
     filing_df = df_from_filings(filings)
     filing_df['filing_date'] = pd.to_datetime(filing_df['filing_date'])
-
-    print('===== Get transactions =====')
-    transactions = get_trans()
-
-    print('===== Get filers =====')
-    filers = get_all_filers(set(filing_df['filer_nid']))
 
     tran_df = df_from_trans(transactions)
     filer_df = df_from_filers(filers)
@@ -419,39 +495,7 @@ def main():
     })
     tran_df = tran_df.merge(expn_codes, how='left', on='expn_code')
 
-    save_source_data({
-        'filings': filings,
-        'transactions': transactions,
-        'filers': filers
-    })
-
-    filer_to_cand_cols = [
-        'local_agency_id',
-        'filer_id',
-        'election_year',
-        'filer_name',
-        'filer_name_local',
-        'office',
-        'start_date',
-        'end_date'
-    ]
-    filer_to_cand = pd.read_csv(FILER_TO_CAND_PATH)
-    filer_to_cand = filer_to_cand.rename(columns={
-        'SOS ID': 'filer_id',
-        'Local Agency ID': 'local_agency_id',
-        'Filer Name': 'filer_name_local',
-        'contest': 'office',
-        'candidate': 'filer_name',
-        'start': 'start_date',
-        'end': 'end_date'
-    })[
-        filer_to_cand_cols
-    ].astype({ 'filer_id': 'string' })
-
-    filer_to_cand['end_date'] = pd.to_datetime(filer_to_cand['end_date'])
-    filer_to_cand['start_date'] = pd.to_datetime(filer_to_cand['start_date'])
-    filer_to_cand['jurisdiction'] = filer_to_cand.apply(get_jurisdiction, axis=1)
-
+    filer_to_cand = df_from_candidates()
     filer_id_mapping = filer_to_cand.merge(filer_df, how='left', on='filer_id')
     filer_filings = filer_id_mapping.merge(filing_df, how='left', on='filer_nid')
     filing_trans = filer_filings.rename(columns={
@@ -529,4 +573,11 @@ def main():
     expend_df.to_csv(expends_file_path, index=False)
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--download', action='store_true')
+
+    args = parser.parse_args()
+
+    filings_json, transactions_json, filers_json = get_source_data(args.download)
+
+    main(filings_json, transactions_json, filers_json)
