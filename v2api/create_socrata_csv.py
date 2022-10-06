@@ -446,7 +446,7 @@ def get_jurisdiction(row):
         return 'Council District'
     if row['office'].lower().startswith('ousd district'):
         return 'Oakland Unified School District'
-    
+
     return 'Citywide'
 
 def get_filing_deadlines():
@@ -577,8 +577,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--download', action='store_true')
 
-    args = parser.parse_args()
+    ns = parser.parse_args()
 
-    filings_json, transactions_json, filers_json = get_source_data(args.download)
+    filings_json, transactions_json, filers_json = get_source_data(ns.download)
 
     main(filings_json, transactions_json, filers_json)
