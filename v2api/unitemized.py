@@ -18,6 +18,7 @@ from .create_socrata_csv import (
     df_from_filings,
     df_from_filers,
     get_contrib_category,
+    get_contrib_type,
     get_address)
 
 FILING_ELEMENTS_NAME = 'filing_elements'
@@ -251,9 +252,7 @@ class Transaction:
             or f'{transactor_first_name} {transactor_last_name}'.strip())
         self.contributor_name = contributor_name
 
-        self.contributor_type = ('Individual'
-            if transaction_model['entityCd'] == 'IND'
-            else 'Organization')
+        self.contributor_type = get_contrib_type(transaction_model['entityCd'])
         self.contributor_category = get_contrib_category(transaction_model['entityCd'])
         self.contributor_location = None
         self.amount = transaction_model['tranAmt1']
@@ -317,6 +316,30 @@ class Transaction:
 
         return df
 
+class UnitemizedTransaction(Transaction):
+    """ Fit 'UnItemized' filing_element to Transaction """
+    def __init__(self, filing_element: dict):
+        transaction_record = {
+            **filing_element,
+            'transaction': {
+                'tranId': 'Unitemized',
+                'entityCd': 'Unitemized',
+                'tranDate': filing_element['elementModel']['calculatedDate'],
+                'tranCode': 'Unitemized',
+                'tranDscr': 'Unitemized',
+                'tranNamF': '',
+                'tranNamL': 'Unitemized',
+                'tranAdr1': 'Unitemized',
+                'tranAdr2': 'Unitemized',
+                'tranCity': 'Unitemized',
+                'tranST': 'Unitemized',
+                'tranZip4': 'Unitemized',
+                'tranAmt1': filing_element['elementModel']['amount'],
+                'calTransactionType': filing_element['specificationRef']['name']
+            }
+        }
+        super().__init__(transaction_record)
+
 def main():
     """ Do whatever I'm currently working on """
     parser = argparse.ArgumentParser()
@@ -357,14 +380,28 @@ def main():
     pp.pprint(transaction_elements[0])
 
     unitemized_elements = [
-        Transaction.from_unitemized(f) for f
+        UnitemizedTransaction(f) for f
         in filing_elements
         if f['elementClassification'] == 'UnItemizedTransaction'
         and f['elementType'] == 'F460ALine2'
         and f['elementActivityType'] != 'Superseded'
+        and f['elementModel']['amount'] > 0
     ]
     print('num unitemized transaction elements', len(unitemized_elements))
-    pp.pprint(unitemized_elements[0].df)
+    pp.pprint(unitemized_elements[0].df.drop(columns=[
+        'filing_nid',
+        'tran_id',
+        'element_nid',
+        'contributor_location',
+        'contributor_category',
+        'contributor_type',
+        'contributor_name',
+        'contributor_region',
+        'zip_code',
+        'state',
+        'city',
+        'expn_code'
+    ]))
 
 if __name__ == '__main__':
     main()
