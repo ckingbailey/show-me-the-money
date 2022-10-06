@@ -18,7 +18,6 @@ from .create_socrata_csv import (
     df_from_filings,
     df_from_filers,
     get_contrib_category,
-    get_contrib_type,
     get_address)
 
 FILING_ELEMENTS_NAME = 'filing_elements'
@@ -252,7 +251,9 @@ class Transaction:
             or f'{transactor_first_name} {transactor_last_name}'.strip())
         self.contributor_name = contributor_name
 
-        self.contributor_type = get_contrib_type(transaction_model['entityCd'])
+        self.contributor_type = ('Individual'
+            if transaction_model['entityCd'] == 'IND'
+            else 'Organization')
         self.contributor_category = get_contrib_category(transaction_model['entityCd'])
         self.contributor_location = None
         self.amount = transaction_model['tranAmt1']
@@ -269,29 +270,6 @@ class Transaction:
         self.contributor_region = None
 
         self.get_address(transaction_model)
-
-    @classmethod
-    def from_unitemized(cls, unitemized: dict):
-        """ Create a Transaction record from an "UnItemized" filing-element record """
-        return cls({
-            **unitemized,
-            'transaction': {
-                'tranId': 'Unitemized',
-                'entityCd': 'Unitemized',
-                'tranDate': unitemized['elementModel']['calculatedDate'],
-                'tranCode': 'Unitemized',
-                'tranDscr': 'Unitemized',
-                'tranNamF': '',
-                'tranNamL': 'Unitemized',
-                'tranAdr1': '',
-                'tranAdr2': '',
-                'tranCity': '',
-                'tranST': '',
-                'tranZip4': '',
-                'tranAmt1': unitemized['elementModel']['amount'],
-                'calTransactionType': unitemized['specificationRef']['name']
-            }
-        })
 
     def get_address(self, transaction_model: dict) -> None:
         """ Set address fields """
@@ -339,6 +317,17 @@ class UnitemizedTransaction(Transaction):
             }
         }
         super().__init__(transaction_record)
+
+        self.contributor_address = 'Unitemized'
+        self.city = ''
+        self.state = ''
+        self.zip_code = ''
+        self.contributor_region = 'Unitemized'
+
+        self.contributor_category = 'Unitemized'
+        self.contributor_type = 'Unitemized'
+        self.contributor_name = ''
+
 
 def main():
     """ Do whatever I'm currently working on """
@@ -390,9 +379,9 @@ def main():
     print('num unitemized transaction elements', len(unitemized_elements))
     pp.pprint(unitemized_elements[0].df.drop(columns=[
         'filing_nid',
-        'tran_id',
+        # 'tran_id',
         'element_nid',
-        'contributor_location',
+        # 'contributor_location',
         'contributor_category',
         'contributor_type',
         'contributor_name',
@@ -400,7 +389,10 @@ def main():
         'zip_code',
         'state',
         'city',
-        'expn_code'
+        'receipt_date',
+        'expn_code',
+        'party',
+        'form'
     ]))
 
 if __name__ == '__main__':
