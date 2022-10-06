@@ -328,6 +328,41 @@ class UnitemizedTransaction(Transaction):
         self.contributor_type = 'Unitemized'
         self.contributor_name = ''
 
+class TransactionCollection:
+    """ A bunch of transactions all in one place """
+    def __init__(self, transactions: list[Transaction]):
+        self.transactions = transactions
+
+    @property
+    def df(self):
+        """ Get a Pandas DataFrame of transactions """
+        tran_df = pd.DataFrame([
+            t.__dict__
+            for t in self.transactions
+        ])
+        tran_df = tran_df.astype({
+            'element_nid': 'string',
+            'tran_id': 'string',
+            'filing_nid': 'string',
+            'contributor_name': 'string',
+            'contributor_type': 'string',
+            'contributor_category': 'string',
+            'contributor_location': 'string',
+            'amount': 'float32',
+            'receipt_date': 'string',
+            'expn_code': 'string',
+            'expenditure_description': 'string',
+            'form': 'string',
+            'party': 'string',
+            'contributor_address': 'string',
+            'city': 'string',
+            'state': 'string',
+            'zip_code': 'string',
+            'contributor_region': 'string',
+        })
+        tran_df['receipt_date'] = pd.to_datetime(tran_df['receipt_date'])
+
+        return tran_df
 
 def main():
     """ Do whatever I'm currently working on """
@@ -368,16 +403,16 @@ def main():
     print('num transaction elements', len(transaction_elements))
     pp.pprint(transaction_elements[0])
 
-    unitemized_elements = [
+    unitemized_elements = TransactionCollection([
         UnitemizedTransaction(f) for f
         in filing_elements
         if f['elementClassification'] == 'UnItemizedTransaction'
         and f['elementType'] == 'F460ALine2'
         and f['elementActivityType'] != 'Superseded'
         and f['elementModel']['amount'] > 0
-    ]
-    print('num unitemized transaction elements', len(unitemized_elements))
-    pp.pprint(unitemized_elements[0].df.drop(columns=[
+    ])
+    print('num unitemized transaction elements', len(unitemized_elements.transactions))
+    pp.pprint(unitemized_elements.df.iloc[0].drop(columns=[
         'filing_nid',
         # 'tran_id',
         'element_nid',
