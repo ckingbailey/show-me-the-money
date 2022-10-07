@@ -403,7 +403,7 @@ def main():
     print('num transaction elements', len(transaction_elements))
     pp.pprint(transaction_elements[0])
 
-    unitemized_elements = TransactionCollection([
+    unitemized_transactions = TransactionCollection([
         UnitemizedTransaction(f) for f
         in filing_elements
         if f['elementClassification'] == 'UnItemizedTransaction'
@@ -411,24 +411,10 @@ def main():
         and f['elementActivityType'] != 'Superseded'
         and f['elementModel']['amount'] > 0
     ])
-    print('num unitemized transaction elements', len(unitemized_elements.transactions))
-    pp.pprint(unitemized_elements.df.iloc[0].drop(columns=[
-        'filing_nid',
-        # 'tran_id',
-        'element_nid',
-        # 'contributor_location',
-        'contributor_category',
-        'contributor_type',
-        'contributor_name',
-        'contributor_region',
-        'zip_code',
-        'state',
-        'city',
-        'receipt_date',
-        'expn_code',
-        'party',
-        'form'
-    ]))
+    print('num unitemized transaction elements', len(unitemized_transactions.transactions))
+    pp.pprint(unitemized_transactions.df.iloc[:3])
+
+    unitemized_transactions.df.to_csv('example/unitemized.csv', index=False)
 
 if __name__ == '__main__':
     main()
