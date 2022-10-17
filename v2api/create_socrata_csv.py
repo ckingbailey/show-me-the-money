@@ -545,7 +545,7 @@ def main(filings, transactions, filers):
         'receipt_date',
         'election_year',
         'office',
-        'jurisdiction', # TODO: Fill jurisdiction with committee type
+        'jurisdiction',
         'party'
     ]
     contribs = df[df['form'].isin(CONTRIBUTION_FORMS)]
