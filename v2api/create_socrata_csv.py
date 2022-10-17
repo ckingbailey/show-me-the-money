@@ -146,6 +146,7 @@ def get_trans() -> list[dict]:
         offset = offset + body['limit']
         print('\u258a', end='', flush=True)
 
+    print('')
     return results
 
 def get_trans_for_filing(filing_nid, offset=0) -> tuple[list[dict], dict]:
@@ -398,7 +399,7 @@ def df_from_candidates() -> pd.DataFrame:
         'election_year',
         'filer_name',
         'filer_name_local',
-        'committee_type',
+        'jurisdiction',
         'office',
         'start_date',
         'end_date'
@@ -423,7 +424,7 @@ def df_from_candidates() -> pd.DataFrame:
         'SOS ID': 'filer_id',
         'Local Agency ID': 'local_agency_id',
         'Filer Name': 'filer_name_local',
-        'Type': 'committee_type',
+        'Type': 'jurisdiction',
         'contest': 'office',
         'candidate': 'filer_name',
         'start': 'start_date',
@@ -434,7 +435,6 @@ def df_from_candidates() -> pd.DataFrame:
 
     filer_to_cand['end_date'] = pd.to_datetime(filer_to_cand['end_date'])
     filer_to_cand['start_date'] = pd.to_datetime(filer_to_cand['start_date'])
-    filer_to_cand['jurisdiction'] = filer_to_cand.apply(get_jurisdiction, axis=1)
 
     return filer_to_cand
 
@@ -513,18 +513,15 @@ def main(filings, transactions, filers):
     }).rename(columns={
         'filing_nid': 'filing_id'
     })
-    print(df.columns)
     df['filer_name'] = df.apply(
         lambda x: (
             x['filer_name']
-            if x['committee_type'] == 'Candidate or Officeholder'
+            if x['jurisdiction'] == 'Candidate or Officeholder'
             else x['filer_name_local']
         ).strip(),
         axis=1,
         result_type='reduce'
     )
-    print(df['filer_name'].sort_values().unique())
-    df['jurisdiction'] = df['committee_type'] # TODO: Do this when df is created
 
     df.to_csv(f'{EXAMPLE_DATA_DIR}/all_trans.csv', index=False)
 
