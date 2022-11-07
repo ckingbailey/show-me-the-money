@@ -405,11 +405,11 @@ def df_from_candidates() -> pd.DataFrame:
         'end_date'
     ]
     filer_to_cand = pd.read_csv(FILER_TO_CAND_PATH, dtype={
-        'Filer Name': 'string',
-        'Is Terminated?': 'string',
-        'SOS ID': 'string',
-        'Type': 'string',
-        'Local Agency ID': 'string',
+        'filer_name': 'string',
+        'is_terminated': 'string',
+        'sos_id': 'string',
+        'type': 'string',
+        'local_agency_id': 'string',
         'election_year': int,
         'candidate': 'string',
         'contest': 'string',
@@ -421,15 +421,14 @@ def df_from_candidates() -> pd.DataFrame:
         'ballot_status': 'string'
     })
     filer_to_cand = filer_to_cand.rename(columns={
-        'SOS ID': 'filer_id',
-        'Local Agency ID': 'local_agency_id',
-        'Filer Name': 'filer_name_local',
-        'Type': 'jurisdiction',
+        'sos_id': 'filer_id',
+        'filer_name': 'filer_name_local',
+        'type': 'jurisdiction',
         'contest': 'office',
         'candidate': 'filer_name',
         'start': 'start_date',
         'end': 'end_date'
-    })[
+    }, errors='raise')[
         filer_to_cand_cols
     ].astype({ 'filer_id': 'string' })
 
