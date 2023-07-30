@@ -1,7 +1,9 @@
 """ Get stuff out of Netfile v2 API
 """
-from pprint import PrettyPrinter
+import os
 from pathlib import Path
+from pprint import PrettyPrinter
+from typing import Tuple
 import requests
 
 BASE_URL = 'https://netfile.com/api/campaign'
@@ -15,7 +17,7 @@ env_vars = {
     in  Path('.env').read_text(encoding='utf8').strip().split('\n')
 }
 
-def get_auth_from_env_file(filename: str='.env'):
+def get_auth_from_env_file(filename: str='.env') -> Tuple[str]:
     """ Split .env file on newline and look for API_KEY and API_SECRET
         Return their values as a tuple
     """
@@ -28,7 +30,7 @@ def get_auth_from_env_file(filename: str='.env'):
 
     return auth
 
-AUTH = get_auth_from_env_file()
+AUTH = (os.environ['NETFILE_API_KEY'], os.environ['NETFILE_API_SECRET'])
 
 pp = PrettyPrinter()
 
