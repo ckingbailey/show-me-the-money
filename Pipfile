@@ -6,16 +6,13 @@ name = "pypi"
 [packages]
 requests = "*"
 pandas = "*"
-pyarrow = "*"
-sqlalchemy = "*"
-psycopg2 = "*"
-pytest = "*"
-requests-mock = "*"
-sodapy = "*"
 socrata-py = "*"
-autopep8 = "*"
 
 [dev-packages]
+pytest = "*"
+requests-mock = "*"
+autopep8 = "*"
+pipreqs = "*"
 
 [requires]
 python_version = "3.9"
